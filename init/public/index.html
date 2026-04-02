@@ -2,227 +2,198 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>AI 智能体（本地Qwen）</title>
+<title>AI Agent 控制台</title>
 
 <style>
 body {
-    font-family: "Microsoft YaHei";
-    background: #f5f6fa;
     margin: 0;
+    font-family: "MiSans Medium";
+    background: #f4f7fb;
 }
 
-.container {
-    width: 900px;
-    margin: 30px auto;
-}
-
-.title {
-    font-size: 22px;
-    margin-bottom: 15px;
-}
-
-.chat {
-    background: #fff;
-    height: 400px;
-    overflow-y: auto;
-    border-radius: 10px;
-    padding: 15px;
-}
-
-.msg {
-    margin: 10px 0;
-}
-
-.user {
-    text-align: right;
-    color: #2563eb;
-}
-
-.ai {
-    text-align: left;
-    color: #111;
-}
-
-.json {
-    background: #111;
-    color: #0f0;
-    padding: 10px;
-    border-radius: 6px;
-    font-family: monospace;
-    white-space: pre-wrap;
-}
-
-.inputBox {
+/* 顶部 */
+.header {
+    height: 60px;
+    background: #1677ff;
+    color: #fff;
     display: flex;
-    margin-top: 10px;
+    align-items: center;
+    padding: 0 20px;
+    font-size: 18px;
+}
+
+/* 输入区 */
+.input-bar {
+    display: flex;
+    padding: 15px;
+    background: #fff;
+    border-bottom: 1px solid #eee;
 }
 
 textarea {
     flex: 1;
     height: 60px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
     padding: 10px;
+    font-size: 14px;
 }
 
 button {
     width: 120px;
-    background: #2563eb;
-    color: #fff;
+    margin-left: 10px;
+    background: #1677ff;
     border: none;
+    color: #fff;
+    border-radius: 6px;
+    cursor: pointer;
 }
+
+/* 主体 */
+.container {
+    display: flex;
+    height: calc(100vh - 120px);
+}
+
+/* 左侧表格 */
+.left {
+    width: 60%;
+    background: #fff;
+    padding: 10px;
+    overflow: auto;
+}
+
+/* 右侧JSON */
+.right {
+    width: 40%;
+    background: #0f172a;
+    color: #0f0;
+    padding: 10px;
+    font-family: monospace;
+    overflow: auto;
+}
+
+/* 表格 */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th {
+    background: #1677ff;
+    color: #fff;
+    padding: 10px;
+    text-align: left;
+}
+
+td {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+/* 标签 */
+.tag {
+    padding: 3px 8px;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 12px;
+}
+
+.mark1 { background: #faad14; }
+.mark2 { background: #1677ff; }
+.mark3 { background: #52c41a; }
+.mark4 { background: #722ed1; }
 
 </style>
 </head>
 
 <body>
 
+<div class="header">
+    🚀 AI 智能体控制台（本地 Qwen + SQL Server）
+</div>
+
+<div class="input-bar">
+    <textarea id="input" placeholder="例如：查待处理订单 / 删除订单2 / 给订单3备注：客户急单"></textarea>
+    <button onclick="send()">执行</button>
+</div>
+
 <div class="container">
 
-    <div class="title">🚀 本地 AI 智能体（Qwen）</div>
+    <!-- 左侧表格 -->
+    <div class="left">
+        <table id="table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>订单号</th>
+                    <th>客户</th>
+                    <th>状态</th>
+                    <th>备注</th>
+                    <th>金额</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
 
-    <div class="chat" id="chat"></div>
-
-    <div class="inputBox">
-        <textarea id="input" placeholder="例如：查待处理订单"></textarea>
-        <button onclick="send()">执行</button>
+    <!-- 右侧 JSON -->
+    <div class="right" id="json">
+        等待执行...
     </div>
 
 </div>
 
 <script>
 
-let history = [];
-
-function add(role, text, isJson=false) {
-    const div = document.createElement('div');
-    div.className = 'msg ' + role;
-
-    if(isJson){
-        div.innerHTML = `<div class="json">${text}</div>`;
-    }else{
-        div.innerText = text;
-    }
-
-    document.getElementById('chat').appendChild(div);
-}
-
 async function send() {
+    const text = document.getElementById('input').value.trim();
+    if (!text) return;
 
-    const input = document.getElementById('input');
-    const text = input.value.trim();
-    if(!text) return;
-
-    add('user', text);
-
-    const res = await fetch('/api/ai/chat', {
+    const res = await fetch('/api/agent/dispatch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            message: text,
-            systemPrompt: buildPrompt(),
-            history
-        })
+        body: JSON.stringify({ text })
     });
 
     const data = await res.json();
 
-    let reply = data.reply || '';
+    // 显示 JSON
+    document.getElementById('json').innerText =
+        JSON.stringify(data, null, 2);
 
-    // 尝试解析 JSON
-    try {
-        let json = JSON.parse(reply);
-        add('ai', JSON.stringify(json, null, 2), true);
-
-        // 自动执行
-        runAction(json);
-
-    } catch {
-        add('ai', reply);
-    }
-
-    history.push({ role: 'user', content: text });
-    history.push({ role: 'assistant', content: reply });
-
-    input.value = '';
+    // 渲染表格
+    renderTable(data.result || []);
 }
 
-function buildPrompt() {
-    return `
-你是订单系统智能体，只能返回 JSON：
+/* 渲染表格 */
+function renderTable(list) {
+    const tbody = document.querySelector('#table tbody');
+    tbody.innerHTML = '';
 
-{
-  "module": "order",
-  "action": "",
-  "args": {}
-}
+    list.forEach(item => {
+        const tr = document.createElement('tr');
 
-规则：
-1. 不允许解释
-2. 不允许输出多余文字
-3. module 固定为 order
-4. action 只能是：
-   list / updateMark / delete / remark
+        tr.innerHTML = `
+            <td>${item.id}</td>
+            <td>${item.order_no}</td>
+            <td>${item.client_name}</td>
+            <td>${renderMark(item.mark)}</td>
+            <td>${item.remark || ''}</td>
+            <td>${item.total_amount}</td>
+        `;
 
-mark含义：
-1 待处理
-2 处理中
-3 已处理
-4 备注
-
-示例：
-用户：查待处理订单
-返回：
-{
-  "module": "order",
-  "action": "list",
-  "args": { "mark": 1 }
-}
-`;
-}
-
-async function runAction(json) {
-
-    if(json.module !== 'order') return;
-
-    let url = '';
-    let method = 'GET';
-    let body = null;
-
-    switch(json.action) {
-
-        case 'list':
-            url = '/api/order/list?mark=' + (json.args.mark || '');
-            break;
-
-        case 'updateMark':
-            url = '/api/order/updateMark';
-            method = 'POST';
-            body = json.args;
-            break;
-
-        case 'delete':
-            url = '/api/order/delete';
-            method = 'POST';
-            body = json.args;
-            break;
-
-        case 'remark':
-            url = '/api/order/remark';
-            method = 'POST';
-            body = json.args;
-            break;
-    }
-
-    if(!url) return;
-
-    const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: body ? JSON.stringify(body) : null
+        tbody.appendChild(tr);
     });
+}
 
-    const result = await res.json();
-
-    add('ai', "执行结果：\n" + JSON.stringify(result, null, 2), true);
+/* 状态标签 */
+function renderMark(mark) {
+    if (mark == 1) return '<span class="tag mark1">待处理</span>';
+    if (mark == 2) return '<span class="tag mark2">处理中</span>';
+    if (mark == 3) return '<span class="tag mark3">已处理</span>';
+    if (mark == 4) return '<span class="tag mark4">备注</span>';
+    return mark;
 }
 
 </script>
