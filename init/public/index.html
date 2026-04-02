@@ -3,13 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 业务助手</title>
+    <title>AI Business Intelligence Terminal</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/misans@1.0.5/lib/MiSans-Medium.css" rel="stylesheet">
     <style>
-        @font-face {
-            font-family: 'MainFont';
-            src: url('/fonts/main.ttf') format('truetype');
+        :root {
+            --primary-glow: #007aff;
+            --secondary-glow: #00d4ff;
+            --bg-color: #0a0c10;
+            --card-bg: rgba(25, 30, 40, 0.7);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --text-main: #e2e8f0;
+            --text-dim: #94a3b8;
         }
 
         * {
@@ -17,433 +22,356 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
-            background: #f5f5f5;
-            color: #2c3e50;
-            font-family: 'MiSans-Medium', 'MainFont', -apple-system, sans-serif;
-            line-height: 1.6;
-        }
-        
-        #app {
+            background: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 50% -20%, #1e293b, transparent),
+                radial-gradient(circle at 0% 100%, #0f172a, transparent);
+            color: var(--text-main);
+            font-family: 'MiSans-Medium', -apple-system, sans-serif;
             min-height: 100vh;
-            padding: 24px;
-            max-width: 1200px;
+            overflow-x: hidden;
+        }
+
+        #app {
+            max-width: 1400px;
             margin: 0 auto;
+            padding: 40px 20px;
         }
-        
+
+        /* Header Section */
         .header {
-            margin-bottom: 32px;
+            text-align: center;
+            margin-bottom: 50px;
+            position: relative;
         }
-        
+
         .header h1 {
-            font-size: 32px;
-            font-weight: 700;
-            color: #0052cc;
-            margin-bottom: 4px;
-            font-family: 'MainFont';
+            font-size: 42px;
+            background: linear-gradient(to right, #fff, var(--secondary-glow));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1px;
+            margin-bottom: 10px;
         }
-        
-        .header p {
-            font-size: 13px;
-            color: #7f8c8d;
+
+        .header .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: rgba(0, 122, 255, 0.1);
+            border: 1px solid rgba(0, 122, 255, 0.3);
+            border-radius: 20px;
+            color: var(--secondary-glow);
+            font-size: 12px;
+            text-transform: uppercase;
         }
-        
-        .container {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
+
+        /* Layout Grid */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 24px;
         }
-        
-        .main-section {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
+
+        /* Glass Cards */
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
         }
-        
-        .status-panel {
+
+        /* Status Metrics */
+        .metrics-bar {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 16px;
+            margin-bottom: 24px;
         }
-        
-        .status-card {
-            background: white;
-            border: 1px solid #e8e8e8;
-            border-radius: 8px;
-            padding: 16px;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+
+        .metric-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
         }
-        
-        .status-card .label {
-            color: #7f8c8d;
-            font-size: 11px;
+
+        .metric-label {
+            font-size: 10px;
+            color: var(--text-dim);
             text-transform: uppercase;
-            letter-spacing: 0.8px;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            gap: 6px;
         }
-        
-        .status-indicator {
+
+        .dot {
             width: 6px;
             height: 6px;
             border-radius: 50%;
-            background: #d0d0d0;
+            background: #334155;
         }
-        
-        .status-indicator.active {
-            background: #0052cc;
-            box-shadow: 0 0 8px rgba(0, 82, 204, 0.4);
+
+        .dot.active {
+            background: var(--secondary-glow);
+            box-shadow: 0 0 10px var(--secondary-glow);
         }
-        
-        .status-value {
-            font-size: 15px;
-            color: #0052cc;
-            font-weight: 600;
-            word-break: break-all;
+
+        .metric-value {
             font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: var(--secondary-glow);
         }
-        
-        .input-section {
-            background: white;
-            border: 1px solid #e8e8e8;
-            border-radius: 8px;
-            padding: 2px;
-            display: flex;
-            gap: 2px;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+
+        /* Input Area */
+        .input-container {
+            position: relative;
+            margin-bottom: 24px;
         }
-        
-        .input-section input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            color: #2c3e50;
-            padding: 14px;
-            font-family: inherit;
-            font-size: 13px;
+
+        .command-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            padding: 18px 120px 18px 24px;
+            border-radius: 12px;
+            color: white;
+            font-size: 16px;
+            transition: all 0.3s;
             outline: none;
         }
-        
-        .input-section input::placeholder {
-            color: #bdc3c7;
+
+        .command-input:focus {
+            border-color: var(--primary-glow);
+            box-shadow: 0 0 15px rgba(0, 122, 255, 0.2);
         }
-        
-        .input-section button {
-            background: #0052cc;
+
+        .send-btn {
+            position: absolute;
+            right: 8px;
+            top: 8px;
+            bottom: 8px;
+            padding: 0 24px;
+            background: var(--primary-glow);
             color: white;
             border: none;
-            padding: 12px 24px;
-            font-family: inherit;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.25s;
-            text-transform: uppercase;
-            letter-spacing: 0.6px;
-            margin: 2px;
-            border-radius: 6px;
-            font-weight: 600;
-        }
-        
-        .input-section button:hover:not(:disabled) {
-            background: #0041a3;
-            box-shadow: 0 4px 12px rgba(0, 82, 204, 0.3);
-        }
-        
-        .input-section button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .results-section {
-            background: white;
-            border: 1px solid #e8e8e8;
             border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-            flex: 1;
-            min-height: 350px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+
+        .send-btn:hover {
+            opacity: 0.9;
+        }
+
+        /* Table Design */
+        .table-container {
+            min-height: 400px;
             overflow: auto;
         }
-        
-        .results-title {
-            color: #0052cc;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            margin-bottom: 16px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #f0f0f0;
-            font-weight: 600;
-        }
-        
+
         table {
             width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
+            border-collapse: separate;
+            border-spacing: 0 8px;
         }
-        
+
         th {
-            color: #555;
             text-align: left;
-            padding: 10px;
-            background: #fafafa;
-            border-bottom: 1px solid #e8e8e8;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        
-        td {
-            padding: 10px;
-            border-bottom: 1px solid #f5f5f5;
-            color: #2c3e50;
-            word-break: break-word;
-        }
-        
-        tr:hover {
-            background: #fafafa;
-        }
-        
-        .empty-state {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 200px;
-            color: #95a5a6;
+            padding: 12px 16px;
+            color: var(--text-dim);
             font-size: 12px;
+            text-transform: uppercase;
         }
-        
-        .log-panel {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 320px;
-            height: 280px;
-            background: white;
-            border: 1px solid #e8e8e8;
-            border-radius: 8px;
+
+        td {
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.02);
+            border-top: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        td:first-child {
+            border-left: 1px solid var(--border-color);
+            border-top-left-radius: 8px;
+            border-bottom-left-radius: 8px;
+        }
+
+        td:last-child {
+            border-right: 1px solid var(--border-color);
+            border-top-right-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }
+
+        /* Console Log */
+        .console {
+            height: 600px;
             display: flex;
             flex-direction: column;
-            font-size: 11px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            z-index: 100;
-            opacity: 0;
-            transform: translateY(20px);
-            transition: all 0.3s ease;
         }
-        
-        .log-panel.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        
-        .log-header {
-            padding: 12px;
-            border-bottom: 1px solid #e8e8e8;
+
+        .console-header {
             display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #555;
-            text-transform: uppercase;
-            letter-spacing: 0.6px;
-            font-weight: 600;
-            background: #fafafa;
-            border-radius: 8px 8px 0 0;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
         }
-        
-        .status-dots {
-            display: flex;
-            gap: 4px;
-            margin-left: auto;
-        }
-        
-        .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #d0d0d0;
-        }
-        
+
         .log-content {
             flex: 1;
             overflow-y: auto;
-            padding: 12px;
-            background: white;
             font-family: 'Courier New', monospace;
-            color: #2c3e50;
+            font-size: 12px;
+            line-height: 1.6;
         }
-        
-        .log-line {
-            margin-bottom: 6px;
-            line-height: 1.4;
+
+        .log-entry {
+            margin-bottom: 12px;
+            animation: fadeIn 0.3s ease;
         }
-        
-        .log-time {
-            color: #95a5a6;
-            margin-right: 6px;
-        }
-        
-        .log-msg {
-            color: #2c3e50;
-        }
-        
-        .log-msg.error {
-            color: #e74c3c;
-        }
-        
-        .log-msg.warn {
-            color: #f39c12;
-        }
-        
-        .log-msg.success {
-            color: #27ae60;
-        }
-        
+
+        .log-time { color: #64748b; margin-right: 8px; }
+        .log-type-info { color: #00d4ff; }
+        .log-type-success { color: #4ade80; }
+        .log-type-warn { color: #fbbf24; }
+        .log-type-error { color: #f87171; }
+
         .log-data {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 8px;
+            border-radius: 4px;
             margin-top: 4px;
-            padding: 6px;
-            background: #f9f9f9;
-            border-left: 2px solid #0052cc;
-            font-size: 10px;
-            color: #7f8c8d;
-            overflow-x: auto;
             white-space: pre-wrap;
-            word-break: break-all;
+            color: #94a3b8;
         }
-        
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        
-        ::-webkit-scrollbar-track {
-            background: #f5f5f5;
+
+        .loading-shimmer {
+            animation: pulse 1.5s infinite;
         }
-        
-        ::-webkit-scrollbar-thumb {
-            background: #d0d0d0;
-            border-radius: 3px;
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.4; }
+            100% { opacity: 1; }
         }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            bstatus-panel {
-                grid-template-columns: 1fr;
-            }
-            
-            .log-panel {
-                width: calc(100% - 40px);
-                right: 20px
-        
-        @keyframes blink {
-            0%, 49%, 100% { opacity: 1; }
-            50%, 99% { opacity: 0.5; }
+
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+
+        @media (max-width: 1100px) {
+            .main-layout { grid-template-columns: 1fr; }
+            .console { height: 400px; }
         }
-        
-        @media (max-width: 1024px) {
-            .container {
-                grid-template-columns: 1fr;
-            }
-            
-            .status-panel {
-                grid-template-columns: 1fr;
-            }
-        }
-    </link>
+    </style>
 </head>
 <body>
     <div id="app">
-        <!-- Header -->
         <div class="header">
-            <h1>业务助手</h1>
-            <p>AI 智能指令解析</p>
+            <div class="badge">Enterprise AI Agent v1.2</div>
+            <h1>AI 智能业务调度终端</h1>
+            <p style="color: var(--text-dim); font-size: 14px;">Real-time Instruction Processing & Data Synthesis</p>
         </div>
 
-        <!-- Main Container -->
-        <div class="container">
-            <!-- Main Content -->
-            <div class="main-section">
-                <!-- Status Panel -->
-                <div class="status-panel">
-                    <div class="status-card">
-                        <div class="label">
-                            <span>Module</span>
-                            <span class="status-indicator" :class="{active: currentModule}"></span>
+        <div class="main-layout">
+            <div class="workspace">
+                <div class="metrics-bar">
+                    <div class="metric-item">
+                        <div class="metric-label">
+                            <div class="dot" :class="{active: currentModule}"></div>
+                            Identified Module
                         </div>
-                        <div class="status-value">{{ currentModule || "—" }}</div>
+                        <div class="metric-value">{{ currentModule || "STANDBY" }}</div>
                     </div>
-                    <div class="status-card">
-                        <div class="label">
-                            <span>Action</span>
-                            <span class="status-indicator" :class="{active: currentAction}"></span>
+                    <div class="metric-item">
+                        <div class="metric-label">
+                            <div class="dot" :class="{active: currentAction}"></div>
+                            Action Match
                         </div>
-                        <div class="status-value">{{ currentAction || "—" }}</div>
+                        <div class="metric-value">{{ currentAction || "IDLE" }}</div>
                     </div>
-                    <div class="status-card">
-                        <div class="label">
-                            <span>Args</span>
-                            <span class="status-indicator" :class="{active: currentArgs && currentArgs !== '{}'}"></span>
+                    <div class="metric-item">
+                        <div class="metric-label">
+                            <div class="dot" :class="{active: currentArgs && currentArgs !== '{}'}"></div>
+                            Parameters
                         </div>
-                        <div class="status-value" style="font-size: 12px; overflow: hidden; text-overflow: ellipsis;">{{ currentArgs && currentArgs !== '{}' ? currentArgs : "—" }}</div>
+                        <div class="metric-value" style="font-size: 11px;">{{ currentArgs || "---" }}</div>
                     </div>
                 </div>
 
-                <!-- Input Section -->
-                <div class="input-section">
+                <div class="input-container">
                     <input 
+                        class="command-input"
                         v-model="inputText" 
                         @keyup.enter="handleSend"
-                        placeholder="输入指令..."
+                        placeholder="请输入自然语言业务指令... (例如：查询上月销售前五的商品)"
                         :disabled="loading"
                     />
-                    <button @click="handleSend" :disabled="loading || !inputText.trim()">
-                        {{ loading ? "执行中" : "执行" }}
+                    <button class="send-btn" @click="handleSend" :disabled="loading || !inputText.trim()">
+                        {{ loading ? "处理中..." : "执行指令" }}
                     </button>
                 </div>
 
-                <!-- Results Section -->
-                <div class="results-section">
+                <div class="glass-card table-container">
                     <div v-if="tableData.length > 0">
-                        <div class="results-title">✓ 结果 ({{ tableData.length }} 行)</div>
-                        <div style="overflow-x: auto;">
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th v-for="key in Object.keys(tableData[0])" :key="key">{{ key }}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="(item, idx) in tableData" :key="idx">
-                                        <td v-for="val in item" :key="val">{{ val ?? "—" }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 20px; align-items: center;">
+                            <span style="color: var(--secondary-glow); font-size: 13px; font-weight: 600;">EXECUTED SUCCESSFULLY</span>
+                            <span style="color: var(--text-dim); font-size: 11px;">Rows Returned: {{ tableData.length }}</span>
                         </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th v-for="key in Object.keys(tableData[0])" :key="key">{{ key }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(item, idx) in tableData" :key="idx">
+                                    <td v-for="val in item" :key="val">{{ val ?? "NULL" }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
-                    <div v-else-if="!loading" class="empty-state">
-                        等待指令...
+                    <div v-else-if="!loading" style="height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #475569;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="margin-bottom: 16px; opacity: 0.5;">
+                            <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <path d="M9 10l2 2 4-4" />
+                        </svg>
+                        <p style="font-size: 14px;">等待指令下达...</p>
                     </div>
-                    <div v-else class="empty-state">
-                        <div class="blink">◆ 处理中</div>
+                    <div v-else class="loading-shimmer" style="height: 300px; display: flex; align-items: center; justify-content: center; color: var(--secondary-glow);">
+                        <div style="text-align: center;">
+                            <div style="font-size: 24px; margin-bottom: 10px;">⚡</div>
+                            <div style="font-size: 12px; letter-spacing: 2px;">NEURAL PROCESSING</div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Log Panel -->
-            <div class="log-panel" :class="{show: showLog}">
-                <div class="log-header">
-                    Log
-                    <button @click="showLog = false" style="background: none; border: none; color: #555; cursor: pointer; font-size: 14px;">✕</button>
+            <div class="glass-card console">
+                <div class="console-header">
+                    <span>SYSTEM CORE LOG</span>
+                    <span style="color: var(--secondary-glow);">● ACTIVE</span>
                 </div>
-                <div class="log-content">
-                    <div v-if="logs.length === 0" style="color: #95a5a6;">
-                        就绪
-                    </div>
-                    <div v-for="(log, i) in logs" :key="i" class="log-line">
-                        <span class="log-time">[{{ log.time }}]</span>
-                        <span class="log-msg" :class="log.type">{{ log.msg }}</span>
+                <div class="log-content" id="logScroll">
+                    <div v-for="(log, i) in logs" :key="i" class="log-entry">
+                        <div>
+                            <span class="log-time">{{ log.time }}</span>
+                            <span :class="'log-type-' + log.type">[{{ log.type.toUpperCase() }}]</span>
+                            <span style="margin-left: 8px;">{{ log.msg }}</span>
+                        </div>
                         <div v-if="log.data" class="log-data">{{ log.data }}</div>
                     </div>
                 </div>
@@ -451,852 +379,74 @@
         </div>
     </div>
 
-    <!-- Floating Log Toggle Button -->
-    <button 
-        v-if="!showLog && hasLogs"
-        @click="showLog = true"
-        style="position: fixed; bottom: 20px; right: 20px; background: #0052cc; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-size: 12px; z-index: 99; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); font-family: inherit;"
-    >
-        📋 日志
-    </button>
-
     <script>
-        const { createApp, ref } = Vue;
+        const { createApp, ref, nextTick } = Vue;
 
         createApp({
             setup() {
                 const inputText = ref('');
                 const loading = ref(false);
+                const tableData = ref([]);
                 const currentModule = ref('');
                 const currentAction = ref('');
                 const currentArgs = ref('');
-                const tableData = ref([]);
                 const logs = ref([]);
 
                 const addLog = (msg, type = 'info', data = null) => {
-                    const time = new Date().toLocaleTimeString().slice(0, 8);
-                    logs.value.unshift({ msg, type, time, data });
-                    if (logs.value.length > 30) logs.value.pop();
+                    const now = new Date();
+                    const time = now.getHours().toString().padStart(2, '0') + ':' + 
+                                 now.getMinutes().toString().padStart(2, '0') + ':' + 
+                                 now.getSeconds().toString().padStart(2, '0');
+                    
+                    logs.value.unshift({ time, msg, type, data: data ? JSON.stringify(data, null, 2) : null });
+                    if (logs.value.length > 40) logs.value.pop();
                 };
 
                 const handleSend = async () => {
                     if (!inputText.value.trim() || loading.value) return;
 
-                    const userInput = inputText.value;
-                    addLog(`$ ${userInput}`, 'info');
+                    const text = inputText.value;
+                    addLog(`User Instruction: ${text}`, 'info');
                     inputText.value = '';
                     loading.value = true;
                     tableData.value = [];
 
                     try {
-                        addLog('识别中...', 'warn');
+                        addLog('Analyzing intent with LLM...', 'warn');
                         
                         const response = await fetch('/api/agent/dispatch', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ text: userInput })
-                        });
-
-                        const result = await response.json();
-
-                        if (result.success) {
-                            currentModule.value = result.analysis?.module || '';
-                            currentAction.value = result.analysis?.action || '';
-                            currentArgs.value = JSON.stringify(result.analysis?.args || {});
-                            
-                            addLog(`模块: ${result.analysis?.module}`, 'success');
-                            addLog(`动作: ${result.analysis?.action}`, 'success');
-                            
-                            tableData.value = Array.isArray(result.result) ? result.result : [];
-                            addLog(`成功 (${tableData.value.length} 行)`, 'success');
-                        } else {
-                            addLog(`错误: ${result.msg}`, 'error');
-                        }
-                    } catch (error) {
-                        addLog(`连接失败: ${error.message}`, 'error');
-                    } finally {
-                        loading.value = false;
-                    }
-                };
-
-                return {
-                    inputText,
-                    loading,
-                    currentModule,
-                    currentAction,
-                    currentArgs,
-                    tableData,
-                    logs,
-                    showLog: ref(false),
-                    hasLogs: ref(addLog.length > 0),
-                    handleSend
-                };
-            }
-        }).mount('#app');
-    </script>
-</body>
-</html>
-            margin: 0 auto;
-        }
-        
-        .header {
-            grid-column: 1 / -1;
-            padding: 20px;
-            background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            margin-bottom: 8px;
-        }
-        
-        .header h1 {
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 6px;
-            color: #1a5ccc;
-        }
-        
-        .header p {
-            font-size: 13px;
-            color: #999;
-        }
-        
-        .main-content {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-        
-        .status-panel {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-        }
-        
-        .status-card {
-            background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            padding: 14px;
-            font-size: 12px;
-        }
-        
-        .status-card .label {
-            color: #999;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-size: 11px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .status-indicator {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #ddd;
-        }
-        
-        .status-indicator.active {
-            background: #1a5ccc;
-            box-shadow: 0 0 8px rgba(26, 92, 204, 0.3);
-        }
-        
-        .status-value {
-            font-family: inherit;
-            font-size: 14px;
-            color: #1a5ccc;
-            font-weight: 600;
-            word-break: break-all;
-        }
-        
-        .input-box {
-            background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            padding: 4px;
-            display: flex;
-            gap: 4px;
-        }
-        
-        .input-box input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            color: #333;
-            padding: 12px;
-            font-family: inherit;
-            font-size: 13px;
-            outline: none;
-        }
-        
-        .input-box input::placeholder {
-            color: #bbb;
-        }
-        
-        .input-box button {
-            background: #1a5ccc;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            font-family: inherit;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.25s;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin: 4px;
-            border-radius: 4px;
-            font-weight: 600;
-        }
-        
-        .input-box button:hover:not(:disabled) {
-            background: #0d47a1;
-            box-shadow: 0 2px 8px rgba(26, 92, 204, 0.2);
-        }
-        
-        .input-box button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-        
-        .results-box {
-            flex: 1;
-            background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            padding: 16px;
-            overflow: auto;
-            min-height: 300px;
-        }
-        
-        .results-title {
-            color: #1a5ccc;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 14px;
-            border-bottom: 2px solid #f0f0f0;
-            padding-bottom: 10px;
-            font-weight: 600;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
-        }
-        
-        th {
-            color: #666;
-            text-align: left;
-            padding: 10px;
-            border-bottom: 1px solid #e0e0e0;
-            font-weight: 600;
-            background: #fafafa;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        
-        td {
-            padding: 10px;
-            border-bottom: 1px solid #f0f0f0;
-            color: #333;
-            word-break: break-word;
-        }
-        
-        tr:hover {
-            background: #fafafa;
-        }
-        
-        .empty-state {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 200px;
-            color: #999;
-            font-size: 12px;
-        }
-        
-        .log-box {
-            background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 6px;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            font-size: 11px;
-            min-height: 500px;
-        }
-        
-        .log-header {
-            padding: 10px;
-            border-bottom: 1px solid #e0e0e0;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 600;
-            background: #fafafa;
-        }
-        
-        .status-dots {
-            display: flex;
-            gap: 4px;
-            margin-left: auto;
-        }
-        
-        .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #ddd;
-        }
-        
-        .log-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 10px;
-            color: #1a5ccc;
-            background: white;
-            font-family: 'Courier New', monospace;
-        }
-        
-        .log-line {
-            margin-bottom: 6px;
-            line-height: 1.4;
-        }
-        
-        .log-time {
-            color: #999;
-            margin-right: 6px;
-        }
-        
-        .log-msg {
-            color: #333;
-        }
-        
-        .log-msg.error {
-            color: #d32f2f;
-        }
-        
-        .log-msg.warn {
-            color: #f57c00;
-        }
-        
-        .log-msg.success {
-            color: #388e3c;
-        }
-        
-        .log-data {
-            margin-top: 4px;
-            padding: 6px;
-            background: #f5f5f5;
-            border-left: 2px solid #1a5ccc;
-            font-size: 10px;
-            color: #666;
-            overflow-x: auto;
-            white-space: pre-wrap;
-            word-break: break-all;
-        }
-        
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: #f5f5f5;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: #d0d0d0;
-            border-radius: 4px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: #1a5ccc;
-        }
-        
-        .blink {
-            animation: blink 1.2s infinite;
-        }
-        
-        @keyframes blink {
-            0%, 49%, 100% { opacity: 1; }
-            50%, 99% { opacity: 0.5; }
-        }
-        
-        @media (max-width: 1024px) {
-            #app {
-                grid-template-columns: 1fr;
-            }
-            
-            .status-panel {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div id="app">
-        <!-- Header -->
-        <div class="header">
-            <h1>AI 业务助手</h1>
-            <p>智能指令解析系统 v1.0 | 快速获取业务数据</p>
-        </div>
-
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Status Panel -->
-            <div class="status-panel">
-                <div class="status-card">
-                    <div class="label">
-                        <span>Module Layer</span>
-                        <span class="status-indicator" :class="{active: currentModule}"></span>
-                    </div>
-                    <div class="status-value">{{ currentModule || "待识别" }}</div>
-                </div>
-                <div class="status-card">
-                    <div class="label">
-                        <span>Action Layer</span>
-                        <span class="status-indicator" :class="{active: currentAction}"></span>
-                    </div>
-                    <div class="status-value">{{ currentAction || "待识别" }}</div>
-                </div>
-                <div class="status-card">
-                    <div class="label">
-                        <span>Args Layer</span>
-                        <span class="status-indicator" :class="{active: currentArgs && currentArgs !== '{}'}"></span>
-                    </div>
-                    <div class="status-value" style="font-size: 11px; overflow-x: auto;">{{ currentArgs || "{}" }}</div>
-                </div>
-            </div>
-
-            <!-- Input Box -->
-            <div class="input-box">
-                <input 
-                    v-model="inputText" 
-                    @keyup.enter="handleSend"
-                    placeholder="输入指令，例如：查询所有订单"
-                    :disabled="loading"
-                />
-                <button @click="handleSend" :disabled="loading || !inputText.trim()">
-                    {{ loading ? "执行中..." : "执行" }}
-                </button>
-            </div>
-
-            <!-- Results Box -->
-            <div class="results-box">
-                <div v-if="tableData.length > 0">
-                    <div class="results-title">✓ 查询结果 ({{ tableData.length }} 行)</div>
-                    <div style="overflow-x: auto;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th v-for="key in Object.keys(tableData[0])" :key="key">{{ key }}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="(item, idx) in tableData" :key="idx">
-                                    <td v-for="val in item" :key="val">{{ val ?? "—" }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div v-else-if="!loading" class="empty-state">
-                    <svg style="width: 40px; height: 40px; margin-bottom: 12px; opacity: 0.3;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                    </svg>
-                    <div>请输入指令开始查询</div>
-                </div>
-                <div v-else class="empty-state">
-                    <div class="blink">● 处理中...</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Log Console -->
-        <div class="log-box">
-            <div class="log-header">
-                📋 System Log
-                <div class="status-dots">
-                    <div class="dot"></div>
-                    <div class="dot"></div>
-                    <div class="dot"></div>
-                </div>
-            </div>
-            <div class="log-content">
-                <div v-if="logs.length === 0" style="color: #999;">
-                    系统就绪
-                </div>
-                <div v-for="(log, i) in logs" :key="i" class="log-line">
-                    <span class="log-time">[{{ log.time }}]</span>
-                    <span class="log-msg" :class="log.type">{{ log.msg }}</span>
-                    <div v-if="log.data" class="log-data">{{ log.data }}</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const { createApp, ref } = Vue;
-
-        createApp({
-            setup() {
-                const inputText = ref('');
-                const loading = ref(false);
-                const currentModule = ref('');
-                const currentAction = ref('');
-                const currentArgs = ref('');
-                const tableData = ref([]);
-                const logs = ref([]);
-
-                const addLog = (msg, type = 'info', data = null) => {
-                    const time = new Date().toLocaleTimeString().slice(0, 8);
-                    logs.value.unshift({ msg, type, time, data });
-                    if (logs.value.length > 50) logs.value.pop();
-                };
-
-                const handleSend = async () => {
-                    if (!inputText.value.trim() || loading.value) return;
-
-                    const userInput = inputText.value;
-                    addLog(`$ ${userInput}`, 'info');
-                    inputText.value = '';
-                    loading.value = true;
-                    tableData.value = [];
-
-                    try {
-                        addLog('正在识别意图...', 'warn');
-                        
-                        const response = await fetch('/api/agent/dispatch', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ text: userInput })
-                        });
-
-                        const result = await response.json();
-
-                        if (result.success) {
-                            currentModule.value = result.analysis?.module || '';
-                            currentAction.value = result.analysis?.action || '';
-                            currentArgs.value = JSON.stringify(result.analysis?.args || {});
-                            
-                            addLog(`识别模块: ${result.analysis?.module}`, 'success');
-                            addLog(`匹配动作: ${result.analysis?.action}`, 'success');
-                            
-                            const argsStr = JSON.stringify(result.analysis?.args || {});
-                            if (argsStr.length > 100) {
-                                addLog(`提取参数: ${argsStr.slice(0, 100)}...`, 'success', argsStr);
-                            } else {
-                                addLog(`提取参数: ${argsStr}`, 'success');
-                            }
-                            
-                            tableData.value = Array.isArray(result.result) ? result.result : [];
-                            addLog(`执行成功 (${tableData.value.length} 行)`, 'success');
-                        } else {
-                            addLog(`错误: ${result.msg}`, 'error');
-                        }
-                    } catch (error) {
-                        addLog(`网络错误: ${error.message}`, 'error');
-                    } finally {
-                        loading.value = false;
-                    }
-                };
-
-                return {
-                    inputText,
-                    loading,
-                    currentModule,
-                    currentAction,
-                    currentArgs,
-                    tableData,
-                    logs,
-                    handleSend
-                };
-            }
-        }).mount('#app');
-    </script>
-</body>
-</html>
-
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Status Panel -->
-            <div class="status-panel">
-                <div class="status-card">
-                    <div class="label">
-                        <span>Layer 1</span>
-                        <span class="status-indicator" :class="{active: currentModule}"></span>
-                    </div>
-                    <div class="status-value">{{ currentModule || "---" }}</div>
-                </div>
-                <div class="status-card">
-                    <div class="label">
-                        <span>Layer 2</span>
-                        <span class="status-indicator" :class="{active: currentAction}"></span>
-                    </div>
-                    <div class="status-value">{{ currentAction || "---" }}</div>
-                </div>
-                <div class="status-card">
-                    <div class="label">
-                        <span>Layer 3</span>
-                        <span class="status-indicator" :class="{active: currentArgs && currentArgs !== '{}'}"></span>
-                    </div>
-                    <div class="status-value" style="font-size: 11px; overflow-x: auto;">{{ currentArgs || "{}" }}</div>
-                </div>
-            </div>
-
-            <!-- Input Box -->
-            <div class="input-box">
-                <input 
-                    v-model="inputText" 
-                    @keyup.enter="handleSend"
-                    placeholder="$ 输入指令..."
-                    :disabled="loading"
-                />
-                <button @click="handleSend" :disabled="loading || !inputText.trim()">
-                    {{ loading ? "执行中" : "执行" }}
-                </button>
-            </div>
-
-            <!-- Results Box -->
-            <div class="results-box">
-                <div v-if="tableData.length > 0">
-                    <div class="results-title">✓ 结果 ({{ tableData.length }} 行)</div>
-                    <div style="overflow-x: auto;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th v-for="key in Object.keys(tableData[0])" :key="key">{{ key }}</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr v-for="(item, idx) in tableData" :key="idx">
-                                    <td v-for="val in item" :key="val">{{ val ?? "—" }}</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div v-else-if="!loading" class="empty-state">
-                    <div>$ 等待指令...</div>
-                </div>
-                <div v-else class="empty-state">
-                    <div class="blink">$ 处理中...</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Log Console -->
-        <div class="log-box">
-            <div class="log-header">
-                <span>📋 Ollama Log</span>
-                <div class="status-dots">
-                    <div class="dot"></div>
-                    <div class="dot"></div>
-                    <div class="dot"></div>
-                </div>
-            </div>
-            <div class="log-content">
-                <div v-if="logs.length === 0" style="color: #666;">
-                    [*] 系统就绪
-                </div>
-                <div v-for="(log, i) in logs" :key="i" class="log-line">
-                    <span class="log-time">[{{ log.time }}]</span>
-                    <span class="log-msg" :class="log.type">{{ log.msg }}</span>
-                    <div v-if="log.data" class="log-data">{{ log.data }}</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const { createApp, ref } = Vue;
-
-        createApp({
-            setup() {
-                const inputText = ref('');
-                const loading = ref(false);
-                const currentModule = ref('');
-                const currentAction = ref('');
-                const currentArgs = ref('');
-                const tableData = ref([]);
-                const logs = ref([]);
-
-                const addLog = (msg, type = 'info', data = null) => {
-                    const time = new Date().toLocaleTimeString().slice(0, 8);
-                    logs.value.unshift({ msg, type, time, data });
-                    if (logs.value.length > 50) logs.value.pop();
-                };
-
-                const handleSend = async () => {
-                    if (!inputText.value.trim() || loading.value) return;
-
-                    const userInput = inputText.value;
-                    addLog(`$ ${userInput}`, 'info');
-                    inputText.value = '';
-                    loading.value = true;
-                    tableData.value = [];
-
-                    try {
-                        addLog('正在识别意图...', 'warn');
-                        
-                        const response = await fetch('/api/agent/dispatch', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ text: userInput })
-                        });
-
-                        const result = await response.json();
-
-                        if (result.success) {
-                            currentModule.value = result.analysis?.module || '';
-                            currentAction.value = result.analysis?.action || '';
-                            currentArgs.value = JSON.stringify(result.analysis?.args || {});
-                            
-                            addLog(`识别模块: ${result.analysis?.module}`, 'success');
-                            addLog(`匹配动作: ${result.analysis?.action}`, 'success');
-                            
-                            const argsStr = JSON.stringify(result.analysis?.args || {});
-                            if (argsStr.length > 100) {
-                                addLog(`提取参数: ${argsStr.slice(0, 100)}...`, 'success', argsStr);
-                            } else {
-                                addLog(`提取参数: ${argsStr}`, 'success');
-                            }
-                            
-                            tableData.value = Array.isArray(result.result) ? result.result : [];
-                            addLog(`执行成功 (${tableData.value.length} 行记录)`, 'success');
-                        } else {
-                            addLog(`错误: ${result.msg}`, 'error');
-                        }
-                    } catch (error) {
-                        addLog(`连接失败: ${error.message}`, 'error');
-                    } finally {
-                        loading.value = false;
-                    }
-                };
-
-                return {
-                    inputText,
-                    loading,
-                    currentModule,
-                    currentAction,
-                    currentArgs,
-                    tableData,
-                    logs,
-                    handleSend
-                };
-            }
-        }).mount('#app');
-    </style>
-</body>
-</html>
-                <div class="bg-slate-900 rounded-2xl p-5 shadow-2xl h-[600px] flex flex-col border border-slate-800">
-                    <div class="flex items-center gap-2 mb-4 border-b border-slate-800 pb-3">
-                        <div class="flex gap-1.5">
-                            <div class="w-3 h-3 rounded-full bg-red-500/20 border border-red-500/50"></div>
-                            <div class="w-3 h-3 rounded-full bg-yellow-500/20 border border-yellow-500/50"></div>
-                            <div class="w-3 h-3 rounded-full bg-green-500/20 border border-green-500/50"></div>
-                        </div>
-                        <span class="text-[10px] text-slate-500 font-mono ml-2 uppercase">Ollama Reasoning Log</span>
-                    </div>
-                    <div class="flex-1 overflow-auto font-mono text-[11px] leading-relaxed text-emerald-500/90 custom-scrollbar">
-                        <div v-for="(log, i) in logs" :key="i" class="mb-2">
-                            <span class="text-slate-600">[{{ log.time }}]</span> 
-                            <span :class="log.type === 'error' ? 'text-red-400' : 'text-emerald-500'"> {{ log.msg }}</span>
-                            <pre v-if="log.data" class="mt-1 p-2 bg-black/30 rounded text-slate-400 overflow-x-auto">{{ JSON.stringify(log.data, null, 2) }}</pre>
-                        </div>
-                        <div v-if="loading" class="animate-pulse">_</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const { createApp, ref, reactive } = Vue;
-
-        createApp({
-            setup() {
-                const inputText = ref('');
-                const loading = ref(false);
-                const tableData = ref([]);
-                const currentModule = ref('');
-                const currentAction = ref('');
-                const currentArgs = ref('');
-                const logs = ref([]);
-
-                const addLog = (msg, type = 'info', data = null) => {
-                    logs.value.unshift({
-                        time: new Date().toLocaleTimeString().split(' ')[0],
-                        msg,
-                        type,
-                        data
-                    });
-                };
-
-                const handleSend = async () => {
-                    const text = inputText.value.trim();
-                    if (!text || loading.value) return;
-
-                    loading.value = true;
-                    tableData.value = [];
-                    addLog(`收到用户指令: "${text}"`);
-                    addLog(`正在调用 Ollama (MODEL: qwen2.5:3b)...`);
-
-                    try {
-                        const res = await fetch('/api/agent/dispatch', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ text })
                         });
-                        const data = await res.json();
+                        const result = await response.json();
 
-                        if (data.success) {
-                            currentModule.value = data.analysis.module;
-                            currentAction.value = data.analysis.action;
-                            currentArgs.value = JSON.stringify(data.analysis.args);
+                        if (result.success) {
+                            currentModule.value = result.analysis?.module;
+                            currentAction.value = result.analysis?.action;
+                            currentArgs.value = JSON.stringify(result.analysis?.args);
                             
-                            addLog(`Layer 1 & 2 解析成功`, 'info', { 
-                                module: data.analysis.module, 
-                                action: data.analysis.action 
-                            });
-                            addLog(`Layer 3 参数提取成功`, 'info', data.analysis.args);
-
-                            tableData.value = Array.isArray(data.result) ? data.result : [data.result];
-                            addLog(`业务逻辑执行完毕，获取到 ${tableData.value.length} 条记录`);
+                            addLog('Mapping successful', 'success', result.analysis);
+                            
+                            tableData.value = Array.isArray(result.result) ? result.result : [result.result];
+                            addLog(`Data fetched: ${tableData.value.length} records found`, 'success');
                         } else {
-                            addLog(`解析失败: ${data.msg}`, 'error');
-                            alert('AI 理解出现偏差: ' + data.msg);
+                            addLog(`Execution failed: ${result.msg}`, 'error');
                         }
                     } catch (e) {
-                        addLog(`系统错误: ${e.message}`, 'error');
+                        addLog(`Network error: ${e.message}`, 'error');
                     } finally {
                         loading.value = false;
-                        inputText.value = '';
                     }
                 };
 
-                return { 
-                    inputText, loading, tableData, 
-                    currentModule, currentAction, currentArgs, 
-                    logs, handleSend 
+                return {
+                    inputText, loading, tableData,
+                    currentModule, currentAction, currentArgs,
+                    logs, handleSend
                 };
             }
         }).mount('#app');
     </script>
-
-    <style>
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-    </style>
 </body>
 </html>
