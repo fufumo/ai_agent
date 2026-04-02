@@ -10,7 +10,7 @@ module.exports = {
       "@Action": "list",
       "@Desc": "查找用户信息。支持姓名、账号、手机号模糊搜索。",
       "@ArgTemp": {
-        "keyword": "" // 搜索关键词
+        "keyword": "" // 可选，仅当用户提到具体的姓名、账号或手机号时填充
       },
       handler: async (args) => {
         let sqlText = `SELECT id, user_name, login_name, phone FROM dbo.tb_User WHERE state <> -1`;
@@ -28,9 +28,9 @@ module.exports = {
       "@Action": "create",
       "@Desc": "添加一名新的后台工作人员或客户账号。",
       "@ArgTemp": {
-        "user_name": "",   // 真实姓名
-        "login_name": "",  // 登录账号
-        "phone": ""        // 手机号码
+        "user_name": "",   // 必需，真实姓名（用户明确提供）
+        "login_name": "",  // 必需，登录账号（用户明确提供）
+        "phone": ""        // 必需，手机号码（用户明确提供）
       },
       handler: async (args) => {
         const sqlText = `

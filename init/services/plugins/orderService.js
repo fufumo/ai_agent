@@ -10,8 +10,8 @@ module.exports = {
       "@Action": "list",
       "@Desc": "根据关键词搜索订单，或根据状态标记(mark)筛选。",
       "@ArgTemp": {
-        "keyword": "", // 订单号或客户名关键词
-        "mark": 0      // 状态：1-待处理, 2-处理中, 3-已处理, 4-备注
+        "keyword": "", // 可选，仅当用户提到具体的订单号或客户名时填充
+        "mark": 0      // 可选，仅当用户提到特定状态时填充（1-待处理, 2-处理中, 3-已处理, 4-备注）
       },
       handler: async (args) => {
         let sqlText = `SELECT id, order_no, client_name, mark, total_amount, remark FROM dbo.tb_Order WHERE state <> -1`;
@@ -33,10 +33,10 @@ module.exports = {
       "@Action": "update",
       "@Desc": "修改现有订单的信息。可以修改金额、客户姓名或备注。",
       "@ArgTemp": {
-        "id": 0,             // 订单的唯一 ID
-        "client_name": "",   // 新的客户姓名
-        "total_amount": 0,   // 新的订单金额（数字）
-        "remark": ""         // 新的备注说明
+        "id": 0,             // 必需，目标订单的唯一 ID
+        "client_name": "",   // 可选，新的客户姓名（不修改时留空）
+        "total_amount": 0,   // 可选，新的订单金额，必须是数字（不修改时为 0）
+        "remark": ""         // 可选，新的备注说明（不修改时留空）
       },
       handler: async (args) => {
         if (!args.id) throw new Error("AI 未能识别到目标订单 ID");
@@ -64,9 +64,9 @@ module.exports = {
       "@Action": "create",
       "@Desc": "创建一个全新的订单记录。",
       "@ArgTemp": {
-        "order_no": "",      // 订单编号
-        "client_name": "",   // 客户姓名
-        "total_amount": 0    // 金额
+        "order_no": "",      // 必需，订单编号（用户明确提供）
+        "client_name": "",   // 必需，客户姓名（用户明确提供）
+        "total_amount": 0    // 必需，订单金额，必须是数字（用户明确提供）
       },
       handler: async (args) => {
         const sqlText = `
