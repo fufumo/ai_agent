@@ -7,7 +7,7 @@ const list = {
     order_no: "", // 可选，仅当用户提到具体的订单号时填充
     client_name: "", // 可选，仅当用户提到具体的客户姓名时填充
     mark: 0, // 可选，仅当用户提到特定状态时填充（1-待处理, 2-处理中, 3-已处理）
-    create_time: [] // 可选，时间范围查询，格式为 [start, end]，仅当用户提到具体时间范围时填充 必须填充两个时间 格式为 "YYYY-MM-DD HH:mm:ss"
+    create_time: [] // 可选，时间范围查询，格式为 [start, end]，仅当用户提到具体时间范围时或者提供有关时间段的信息填充 必须填充两个时间 格式为 "YYYY-MM-DD HH:mm:ss"
   },
   handler: async (args) => {
     let sqlText = `SELECT id, order_no, client_name, mark, total_amount, remark FROM dbo.tb_Order WHERE state <> -1`;
