@@ -1,8 +1,8 @@
 // services/agent/layer3ArgsService.js
-const { askAI } = require('./aiProvider');
+const { askAI } = require('../ai');
 
 async function extractArgs(actionDef, text, session = {}) {
-  const schema = JSON.stringify(actionDef["@ParamsExample"] || {});
+  const schema = JSON.stringify(actionDef["@ArgTemp"] || {});
   const lastContext = session.lastResults ? `参考上下文（上一次查询结果）：${JSON.stringify(session.lastResults.slice(0,3))}` : '';
 
   const systemPrompt = `
@@ -30,3 +30,5 @@ async function extractArgs(actionDef, text, session = {}) {
     return {};
   }
 }
+
+module.exports = { extractArgs };

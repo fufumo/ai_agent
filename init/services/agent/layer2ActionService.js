@@ -1,5 +1,5 @@
 // services/agent/layer2ActionService.js
-const { askAI } = require('./aiProvider');
+const { askAI } = require('../ai');
 
 async function detectAction(plugin, text) {
   const actions = plugin.actions;
@@ -16,3 +16,4 @@ async function detectAction(plugin, text) {
   const actionKey = await askAI(systemPrompt, text);
   return actions[actionKey] ? { action: actionKey, actionDef: actions[actionKey] } : null;
 }
+module.exports = { detectAction };

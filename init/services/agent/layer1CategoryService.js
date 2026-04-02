@@ -1,5 +1,5 @@
 // services/agent/layer1CategoryService.js
-const { askAI } = require('./aiProvider');
+const { askAI } = require('../ai');
 
 async function detectCategory(text, plugins) {
   const pluginInfo = plugins.map(p => `- ${p["@Module"]}: ${p["@Desc"]}`).join('\n');
@@ -17,3 +17,5 @@ async function detectCategory(text, plugins) {
   
   return matchedPlugin ? { module: result, plugin: matchedPlugin } : { module: null };
 }
+
+module.exports = { detectCategory };
