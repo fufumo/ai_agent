@@ -1,86 +1,27 @@
-const { detectCategory } = require('./layer1CategoryService');
-const { detectAction } = require('./layer2ActionService');
-const { extractArgs } = require('./layer3ArgsService');
-
-const orderService = require('../orderService');
-const userService = require('../userService');
-
 async function dispatch(text) {
-  const layer1 = detectCategory(text);
-  if (!layer1.module) {
-    return {
-      success: false,
-      stage: 1,
-      msg: '无法识别类别',
-      data: layer1
-    };
-  }
+  // 1. 加载所有插件 (逻辑同前)
+  const allPlugins = loadPlugins(); 
 
-  const layer2 = detectAction(layer1.module, text);
-  if (!layer2.action) {
-    return {
-      success: false,
-      stage: 2,
-      msg: '无法识别动作',
-      data: {
-        module: layer1.module,
-        nextActions: layer1.nextActions
-      }
-    };
-  }
+  // Layer 1: AI 识别模块
+  const l1 = await detectCategory(text, allPlugins);
+  if (!l1.module) return { success: false, msg: "AI 无法识别业务模块" };
 
-  const args = extractArgs(layer1.module, layer2.action, text);
+  // Layer 2: AI 识别动作
+  const l2 = await detectAction(l1.plugin, text);
+  if (!l2) return { success: false, msg: "AI 无法识别具体操作" };
 
-  const analysis = {
-    module: layer1.module,
-    action: layer2.action,
-    args
-  };
+  // Layer 3: AI 自动填充标准示例参数
+  const args = await extractArgs(l2.actionDef, text, session);
 
-  let result = null;
+  // 执行业务逻辑
+  const result = await l1.plugin.actions[l2.action].handler(args);
 
-  if (layer1.module === 'order') {
-    switch (layer2.action) {
-      case 'list':
-        result = await orderService.list(args);
-        break;
-      case 'create':
-        result = await orderService.create(args);
-        break;
-      case 'updateMark':
-        result = await orderService.updateMark(args);
-        break;
-      case 'delete':
-        result = await orderService.remove(args);
-        break;
-      case 'remark':
-        result = await orderService.remark(args);
-        break;
-      default:
-        return { success: false, msg: 'order action 不支持', analysis };
-    }
-  }
-
-  if (layer1.module === 'user') {
-    switch (layer2.action) {
-      case 'list':
-        result = await userService.list(args);
-        break;
-      case 'create':
-        result = await userService.create(args);
-        break;
-      default:
-        return { success: false, msg: 'user action 不支持', analysis };
-    }
-  }
+  // 存入上下文，方便下次“第几个”的操作
+  if (Array.isArray(result)) session.lastResults = result;
 
   return {
     success: true,
-    analysis,
+    analysis: { module: l1.module, action: l2.action, args },
     result
   };
 }
-
-module.exports = {
-  dispatch
-};

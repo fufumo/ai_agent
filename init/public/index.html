@@ -1,210 +1,141 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<title>AI Agent 控制台</title>
-
-<style>
-/* 定义自定义字体 */
-@font-face {
-    font-family: "MainFont"; 
-    src: url("fonts/main.ttf"); /* 确保路径正确 */
-    font-display: swap;
-}
-
-body {
-    margin: 0;
-    /* 将 MainFont 放在最前面，MiSans 作为备选 */
-    font-family: "MainFont", sans-serif;
-    background: #f4f7fb;
-}
-
-/* 顶部 */
-.header {
-    height: 60px;
-    background: #1677ff;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    padding: 0 20px;
-    font-size: 18px;
-}
-
-/* 输入区 */
-.input-bar {
-    display: flex;
-    padding: 15px;
-    background: #fff;
-    border-bottom: 1px solid #eee;
-}
-
-textarea {
-    flex: 1;
-    height: 60px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    padding: 10px;
-    font-size: 14px;
-}
-
-button {
-    width: 120px;
-    margin-left: 10px;
-    background: #1677ff;
-    border: none;
-    color: #fff;
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-/* 主体 */
-.container {
-    display: flex;
-    height: calc(100vh - 120px);
-}
-
-/* 左侧表格 */
-.left {
-    width: 60%;
-    background: #fff;
-    padding: 10px;
-    overflow: auto;
-}
-
-/* 右侧JSON */
-.right {
-    width: 40%;
-    background: #0f172a;
-    color: #0f0;
-    padding: 10px;
-    font-family: monospace;
-    overflow: auto;
-}
-
-/* 表格 */
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-th {
-    background: #1677ff;
-    color: #fff;
-    padding: 10px;
-    text-align: left;
-}
-
-td {
-    padding: 8px;
-    border-bottom: 1px solid #eee;
-}
-
-/* 标签 */
-.tag {
-    padding: 3px 8px;
-    border-radius: 4px;
-    color: #fff;
-    font-size: 12px;
-}
-
-.mark1 { background: #faad14; }
-.mark2 { background: #1677ff; }
-.mark3 { background: #52c41a; }
-.mark4 { background: #722ed1; }
-
-</style>
+    <title>Ollama AI 业务助手</title>
 </head>
+<body class="bg-gray-50 text-gray-900">
+    <div id="app" class="max-w-6xl mx-auto p-6">
+        
+        <div class="grid grid-cols-3 gap-4 mb-8">
+            <div class="p-4 bg-white rounded-xl shadow-sm border border-gray-100">
+                <div class="text-xs text-gray-400 uppercase font-bold">Layer 1: 模块识别</div>
+                <div class="mt-1 text-lg font-medium text-blue-600">{{ currentModule || '等待中...' }}</div>
+            </div>
+            <div class="p-4 bg-white rounded-xl shadow-sm border border-gray-100">
+                <div class="text-xs text-gray-400 uppercase font-bold">Layer 2: 动作识别</div>
+                <div class="mt-1 text-lg font-medium text-green-600">{{ currentAction || '等待中...' }}</div>
+            </div>
+            <div class="p-4 bg-white rounded-xl shadow-sm border border-gray-100">
+                <div class="text-xs text-gray-400 uppercase font-bold">Layer 3: 参数提取</div>
+                <div class="mt-1 text-xs font-mono bg-gray-50 p-1 rounded">{{ currentArgs || '{}' }}</div>
+            </div>
+        </div>
 
-<body>
+        <div class="relative mb-10">
+            <input 
+                v-model="inputText" 
+                @keyup.enter="handleSend"
+                placeholder="尝试说：把第二个订单的金额改为 998..."
+                class="w-full p-5 pr-16 bg-white shadow-lg rounded-2xl border-none focus:ring-2 focus:ring-black transition-all text-lg"
+                :disabled="loading"
+            />
+            <button 
+                @click="handleSend"
+                class="absolute right-4 top-4 p-2 bg-black text-white rounded-xl hover:bg-gray-800 disabled:bg-gray-300 transition-colors"
+                :disabled="loading"
+            >
+                <span v-if="!loading">发送</span>
+                <span v-else class="flex space-x-1">
+                    <span class="w-1.5 h-1.5 bg-white rounded-full animate-bounce"></span>
+                    <span class="w-1.5 h-1.5 bg-white rounded-full animate-bounce" style="animation-delay: 0.2s"></span>
+                </span>
+            </button>
+        </div>
 
-<div class="header">
-    🚀 AI 智能体控制台（本地 Qwen + SQL Server）
-</div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2 space-y-4">
+                <div v-if="tableData.length > 0" class="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-gray-50 text-gray-400 text-xs uppercase">
+                            <tr>
+                                <th class="p-4 font-semibold" v-for="key in Object.keys(tableData[0])" :key="key">{{ key }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(item, idx) in tableData" :key="idx" class="border-t border-gray-50 hover:bg-gray-50 transition-colors">
+                                <td class="p-4 text-sm" v-for="val in item" :key="val">
+                                    <span v-if="typeof val === 'number' && val > 1000" class="font-mono font-bold">{{ val.toLocaleString() }}</span>
+                                    <span v-else>{{ val }}</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div v-else-if="!loading" class="h-64 flex items-center justify-center border-2 border-dashed border-gray-200 rounded-2xl text-gray-400">
+                    暂无执行结果，请在上方输入指令
+                </div>
+            </div>
 
-<div class="input-bar">
-    <textarea id="input" placeholder="例如：查待处理订单 / 删除订单2 / 给订单3备注：客户急单"></textarea>
-    <button onclick="send()">执行</button>
-</div>
-
-<div class="container">
-
-    <!-- 左侧表格 -->
-    <div class="left">
-        <table id="table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>订单号</th>
-                    <th>客户</th>
-                    <th>状态</th>
-                    <th>备注</th>
-                    <th>金额</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+            <div class="bg-gray-900 rounded-2xl p-5 text-green-400 font-mono text-xs overflow-auto shadow-2xl h-[500px]">
+                <div class="mb-2 text-gray-500">// Ollama AI 实时推理日志</div>
+                <pre>{{ jsonOutput }}</pre>
+            </div>
+        </div>
     </div>
 
-    <!-- 右侧 JSON -->
-    <div class="right" id="json">
-        等待执行...
-    </div>
+    <script>
+        const { createApp, ref } = Vue;
 
-</div>
+        createApp({
+            setup() {
+                const inputText = ref('');
+                const loading = ref(false);
+                const tableData = ref([]);
+                const currentModule = ref('');
+                const currentAction = ref('');
+                const currentArgs = ref('');
+                const jsonOutput = ref('Waiting for command...');
 
-<script>
+                const handleSend = async () => {
+                    if (!inputText.value.trim()) return;
 
-async function send() {
-    const text = document.getElementById('input').value.trim();
-    if (!text) return;
+                    loading.value = true;
+                    jsonOutput.value = "> 正在通过 Ollama 进行语义分析...";
+                    
+                    try {
+                        const res = await fetch('/api/agent/dispatch', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ text: inputText.value })
+                        });
+                        const data = await res.json();
+                        
+                        // 1. 更新分析状态
+                        if (data.analysis) {
+                            currentModule.value = data.analysis.module;
+                            currentAction.value = data.analysis.action;
+                            currentArgs.value = JSON.stringify(data.analysis.args);
+                        }
 
-    const res = await fetch('/api/agent/dispatch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
-    });
+                        // 2. 格式化日志输出
+                        jsonOutput.value = JSON.stringify(data, null, 2);
+                        
+                        // 3. 渲染结果
+                        if (data.success) {
+                            // 兼容单个对象和数组
+                            const result = data.result;
+                            tableData.value = Array.isArray(result) ? result : (result ? [result] : []);
+                            if (!data.analysis.action.includes('list')) {
+                                // 如果是更新或创建，通常返回受影响的行，可以给个提示
+                                console.log('操作执行成功');
+                            }
+                        } else {
+                            alert('AI 理解失败: ' + data.msg);
+                        }
+                    } catch (e) {
+                        jsonOutput.value = `Error: ${e.message}`;
+                    } finally {
+                        loading.value = false;
+                    }
+                };
 
-    const data = await res.json();
-
-    // 显示 JSON
-    document.getElementById('json').innerText =
-        JSON.stringify(data, null, 2);
-
-    // 渲染表格
-    renderTable(data.result || []);
-}
-
-/* 渲染表格 */
-function renderTable(list) {
-    const tbody = document.querySelector('#table tbody');
-    tbody.innerHTML = '';
-
-    list.forEach(item => {
-        const tr = document.createElement('tr');
-
-        tr.innerHTML = `
-            <td>${item.id}</td>
-            <td>${item.order_no}</td>
-            <td>${item.client_name}</td>
-            <td>${renderMark(item.mark)}</td>
-            <td>${item.remark || ''}</td>
-            <td>${item.total_amount}</td>
-        `;
-
-        tbody.appendChild(tr);
-    });
-}
-
-/* 状态标签 */
-function renderMark(mark) {
-    if (mark == 1) return '<span class="tag mark1">待处理</span>';
-    if (mark == 2) return '<span class="tag mark2">处理中</span>';
-    if (mark == 3) return '<span class="tag mark3">已处理</span>';
-    if (mark == 4) return '<span class="tag mark4">备注</span>';
-    return mark;
-}
-
-</script>
-
+                return { 
+                    inputText, loading, tableData, 
+                    currentModule, currentAction, currentArgs, 
+                    jsonOutput, handleSend 
+                };
+            }
+        }).mount('#app');
+    </script>
 </body>
 </html>
