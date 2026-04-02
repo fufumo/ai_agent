@@ -231,7 +231,7 @@
                     this.tableData = [];
                     
                     try {
-                        const response = await fetch('/api/dispatch', {
+                        const response = await fetch('/api/agent/dispatch', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ text: this.inputText })
