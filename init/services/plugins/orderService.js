@@ -6,7 +6,7 @@ const list = {
   "@ArgTemp": {
     order_no: "", // 可选，仅当用户提到具体的订单号时填充
     client_name: "", // 可选，仅当用户提到具体的客户姓名时填充
-    mark: 0, // 可选，仅当用户提到特定状态时填充（1-待处理, 2-处理中, 3-已处理, 4-备注）
+    mark: 0, // 可选，仅当用户提到特定状态时填充（1-待处理, 2-处理中, 3-已处理）
   },
   handler: async (args) => {
     let sqlText = `SELECT id, order_no, client_name, mark, total_amount, remark FROM dbo.tb_Order WHERE state <> -1`;
@@ -109,14 +109,14 @@ const update_mark = {
   "@ArgTemp": {
     id: 0, // 可选，优先使用 ID
     order_no: "", // 可选，若用户提到具体单号则填充
-    mark: 0, // 必需，映射值 (1-4)
+    mark: 0, // 必需，映射值 (1-3)
   },
   handler: async (args) => {
     // 1. 前置校验：必须有标识符和状态值
     if (!args.id && !args.order_no) {
       throw new Error("操作失败：未识别到订单 ID 或 订单号。");
     }
-    if (![1, 2, 3, 4].includes(Number(args.mark))) {
+    if (![1, 2, 3].includes(Number(args.mark))) {
       throw new Error("操作失败：无效的状态标记。");
     }
 
