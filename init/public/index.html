@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI 业务助手</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/misans@1.0.5/lib/MiSans-Medium.css" rel="stylesheet">
     <style>
         @font-face {
             font-family: 'MainFont';
@@ -18,19 +19,523 @@
         }
         
         body {
-            background-color: #f8f9fa;
-            color: #333;
-            font-family: 'MainFont', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+            color: #2c3e50;
+            font-family: 'MiSans-Medium', 'MainFont', -apple-system, sans-serif;
             line-height: 1.6;
         }
         
         #app {
-            display: grid;
-            grid-template-columns: 1fr 340px;
             min-height: 100vh;
+            padding: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            margin-bottom: 32px;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: #0052cc;
+            margin-bottom: 4px;
+            font-family: 'MainFont';
+        }
+        
+        .header p {
+            font-size: 13px;
+            color: #7f8c8d;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .main-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .status-panel {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
             gap: 16px;
+        }
+        
+        .status-card {
+            background: white;
+            border: 1px solid #e8e8e8;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+        }
+        
+        .status-card .label {
+            color: #7f8c8d;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .status-indicator {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #d0d0d0;
+        }
+        
+        .status-indicator.active {
+            background: #0052cc;
+            box-shadow: 0 0 8px rgba(0, 82, 204, 0.4);
+        }
+        
+        .status-value {
+            font-size: 15px;
+            color: #0052cc;
+            font-weight: 600;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .input-section {
+            background: white;
+            border: 1px solid #e8e8e8;
+            border-radius: 8px;
+            padding: 2px;
+            display: flex;
+            gap: 2px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+        }
+        
+        .input-section input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #2c3e50;
+            padding: 14px;
+            font-family: inherit;
+            font-size: 13px;
+            outline: none;
+        }
+        
+        .input-section input::placeholder {
+            color: #bdc3c7;
+        }
+        
+        .input-section button {
+            background: #0052cc;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-family: inherit;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.25s;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin: 2px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+        
+        .input-section button:hover:not(:disabled) {
+            background: #0041a3;
+            box-shadow: 0 4px 12px rgba(0, 82, 204, 0.3);
+        }
+        
+        .input-section button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .results-section {
+            background: white;
+            border: 1px solid #e8e8e8;
+            border-radius: 8px;
             padding: 20px;
-            max-width: 1400px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+            flex: 1;
+            min-height: 350px;
+            overflow: auto;
+        }
+        
+        .results-title {
+            color: #0052cc;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+            font-weight: 600;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        
+        th {
+            color: #555;
+            text-align: left;
+            padding: 10px;
+            background: #fafafa;
+            border-bottom: 1px solid #e8e8e8;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #f5f5f5;
+            color: #2c3e50;
+            word-break: break-word;
+        }
+        
+        tr:hover {
+            background: #fafafa;
+        }
+        
+        .empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 200px;
+            color: #95a5a6;
+            font-size: 12px;
+        }
+        
+        .log-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 320px;
+            height: 280px;
+            background: white;
+            border: 1px solid #e8e8e8;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            font-size: 11px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+        }
+        
+        .log-panel.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .log-header {
+            padding: 12px;
+            border-bottom: 1px solid #e8e8e8;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            font-weight: 600;
+            background: #fafafa;
+            border-radius: 8px 8px 0 0;
+        }
+        
+        .status-dots {
+            display: flex;
+            gap: 4px;
+            margin-left: auto;
+        }
+        
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #d0d0d0;
+        }
+        
+        .log-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            background: white;
+            font-family: 'Courier New', monospace;
+            color: #2c3e50;
+        }
+        
+        .log-line {
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+        
+        .log-time {
+            color: #95a5a6;
+            margin-right: 6px;
+        }
+        
+        .log-msg {
+            color: #2c3e50;
+        }
+        
+        .log-msg.error {
+            color: #e74c3c;
+        }
+        
+        .log-msg.warn {
+            color: #f39c12;
+        }
+        
+        .log-msg.success {
+            color: #27ae60;
+        }
+        
+        .log-data {
+            margin-top: 4px;
+            padding: 6px;
+            background: #f9f9f9;
+            border-left: 2px solid #0052cc;
+            font-size: 10px;
+            color: #7f8c8d;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f5f5f5;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #d0d0d0;
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            bstatus-panel {
+                grid-template-columns: 1fr;
+            }
+            
+            .log-panel {
+                width: calc(100% - 40px);
+                right: 20px
+        
+        @keyframes blink {
+            0%, 49%, 100% { opacity: 1; }
+            50%, 99% { opacity: 0.5; }
+        }
+        
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .status-panel {
+                grid-template-columns: 1fr;
+            }
+        }
+    </link>
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <div class="header">
+            <h1>业务助手</h1>
+            <p>AI 智能指令解析</p>
+        </div>
+
+        <!-- Main Container -->
+        <div class="container">
+            <!-- Main Content -->
+            <div class="main-section">
+                <!-- Status Panel -->
+                <div class="status-panel">
+                    <div class="status-card">
+                        <div class="label">
+                            <span>Module</span>
+                            <span class="status-indicator" :class="{active: currentModule}"></span>
+                        </div>
+                        <div class="status-value">{{ currentModule || "—" }}</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="label">
+                            <span>Action</span>
+                            <span class="status-indicator" :class="{active: currentAction}"></span>
+                        </div>
+                        <div class="status-value">{{ currentAction || "—" }}</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="label">
+                            <span>Args</span>
+                            <span class="status-indicator" :class="{active: currentArgs && currentArgs !== '{}'}"></span>
+                        </div>
+                        <div class="status-value" style="font-size: 12px; overflow: hidden; text-overflow: ellipsis;">{{ currentArgs && currentArgs !== '{}' ? currentArgs : "—" }}</div>
+                    </div>
+                </div>
+
+                <!-- Input Section -->
+                <div class="input-section">
+                    <input 
+                        v-model="inputText" 
+                        @keyup.enter="handleSend"
+                        placeholder="输入指令..."
+                        :disabled="loading"
+                    />
+                    <button @click="handleSend" :disabled="loading || !inputText.trim()">
+                        {{ loading ? "执行中" : "执行" }}
+                    </button>
+                </div>
+
+                <!-- Results Section -->
+                <div class="results-section">
+                    <div v-if="tableData.length > 0">
+                        <div class="results-title">✓ 结果 ({{ tableData.length }} 行)</div>
+                        <div style="overflow-x: auto;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th v-for="key in Object.keys(tableData[0])" :key="key">{{ key }}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="(item, idx) in tableData" :key="idx">
+                                        <td v-for="val in item" :key="val">{{ val ?? "—" }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div v-else-if="!loading" class="empty-state">
+                        等待指令...
+                    </div>
+                    <div v-else class="empty-state">
+                        <div class="blink">◆ 处理中</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Log Panel -->
+            <div class="log-panel" :class="{show: showLog}">
+                <div class="log-header">
+                    Log
+                    <button @click="showLog = false" style="background: none; border: none; color: #555; cursor: pointer; font-size: 14px;">✕</button>
+                </div>
+                <div class="log-content">
+                    <div v-if="logs.length === 0" style="color: #95a5a6;">
+                        就绪
+                    </div>
+                    <div v-for="(log, i) in logs" :key="i" class="log-line">
+                        <span class="log-time">[{{ log.time }}]</span>
+                        <span class="log-msg" :class="log.type">{{ log.msg }}</span>
+                        <div v-if="log.data" class="log-data">{{ log.data }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Log Toggle Button -->
+    <button 
+        v-if="!showLog && hasLogs"
+        @click="showLog = true"
+        style="position: fixed; bottom: 20px; right: 20px; background: #0052cc; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-size: 12px; z-index: 99; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); font-family: inherit;"
+    >
+        📋 日志
+    </button>
+
+    <script>
+        const { createApp, ref } = Vue;
+
+        createApp({
+            setup() {
+                const inputText = ref('');
+                const loading = ref(false);
+                const currentModule = ref('');
+                const currentAction = ref('');
+                const currentArgs = ref('');
+                const tableData = ref([]);
+                const logs = ref([]);
+
+                const addLog = (msg, type = 'info', data = null) => {
+                    const time = new Date().toLocaleTimeString().slice(0, 8);
+                    logs.value.unshift({ msg, type, time, data });
+                    if (logs.value.length > 30) logs.value.pop();
+                };
+
+                const handleSend = async () => {
+                    if (!inputText.value.trim() || loading.value) return;
+
+                    const userInput = inputText.value;
+                    addLog(`$ ${userInput}`, 'info');
+                    inputText.value = '';
+                    loading.value = true;
+                    tableData.value = [];
+
+                    try {
+                        addLog('识别中...', 'warn');
+                        
+                        const response = await fetch('/api/agent/dispatch', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ text: userInput })
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            currentModule.value = result.analysis?.module || '';
+                            currentAction.value = result.analysis?.action || '';
+                            currentArgs.value = JSON.stringify(result.analysis?.args || {});
+                            
+                            addLog(`模块: ${result.analysis?.module}`, 'success');
+                            addLog(`动作: ${result.analysis?.action}`, 'success');
+                            
+                            tableData.value = Array.isArray(result.result) ? result.result : [];
+                            addLog(`成功 (${tableData.value.length} 行)`, 'success');
+                        } else {
+                            addLog(`错误: ${result.msg}`, 'error');
+                        }
+                    } catch (error) {
+                        addLog(`连接失败: ${error.message}`, 'error');
+                    } finally {
+                        loading.value = false;
+                    }
+                };
+
+                return {
+                    inputText,
+                    loading,
+                    currentModule,
+                    currentAction,
+                    currentArgs,
+                    tableData,
+                    logs,
+                    showLog: ref(false),
+                    hasLogs: ref(addLog.length > 0),
+                    handleSend
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
             margin: 0 auto;
         }
         
