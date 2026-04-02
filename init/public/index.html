@@ -5,9 +5,17 @@
 <title>AI Agent 控制台</title>
 
 <style>
+/* 定义自定义字体 */
+@font-face {
+    font-family: "MainFont"; 
+    src: url("fonts/main.ttf"); /* 确保路径正确 */
+    font-display: swap;
+}
+
 body {
     margin: 0;
-    font-family: "MiSans Medium";
+    /* 将 MainFont 放在最前面，MiSans 作为备选 */
+    font-family: "MainFont", "MiSans Medium", "Microsoft YaHei", sans-serif;
     background: #f4f7fb;
 }
 
