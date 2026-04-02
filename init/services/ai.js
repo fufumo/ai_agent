@@ -1,7 +1,7 @@
 // services/agent/aiProvider.js
 const fetch = require('node-fetch');
 const OLLAMA_URL = 'http://127.0.0.1:11434/api/chat';
-const MODEL = 'qwen2.5:3b'; // 或你正在使用的模型
+const MODEL = 'qwen2.5:7b'; // 或你正在使用的模型
 
 async function askAI(systemPrompt, userMessage) {
   const res = await fetch(OLLAMA_URL, {
