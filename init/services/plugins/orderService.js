@@ -7,6 +7,7 @@ const list = {
     order_no: "", // 可选，仅当用户提到具体的订单号时填充
     client_name: "", // 可选，仅当用户提到具体的客户姓名时填充
     mark: 0, // 可选，仅当用户提到特定状态时填充（1-待处理, 2-处理中, 3-已处理）
+    create_time: [] // 可选，时间范围查询，格式为 [start, end]，仅当用户提到具体时间范围时填充 必须填充两个时间 格式为 "YYYY-MM-DD HH:mm:ss"
   },
   handler: async (args) => {
     let sqlText = `SELECT id, order_no, client_name, mark, total_amount, remark FROM dbo.tb_Order WHERE state <> -1`;
@@ -31,6 +32,16 @@ const list = {
       sqlText += ` AND mark = @mark`;
       params.push({ name: "mark", type: sql.Int, value: args.mark });
     }
+
+    if (args.create_time && args.create_time.length === 2) {
+      sqlText += ` AND create_time BETWEEN @start AND @end`;
+      params.push(
+        { name: "start", type: sql.DateTime, value: args.create_time[0] },
+        { name: "end", type: sql.DateTime, value: args.create_time[1] }
+      );
+    }
+
+
     return await query(sqlText + " ORDER BY id DESC", params);
   },
 };
