@@ -15,7 +15,7 @@ const session = {
 function loadPlugins() {
     const plugins = [];
     // 假设插件目录在项目根目录下的 plugins
-    const pluginPath = path.join(__dirname, '../../plugins');
+    const pluginPath = path.join(__dirname, '../plugins');
     
     if (!fs.existsSync(pluginPath)) {
         console.error("插件目录不存在:", pluginPath);
