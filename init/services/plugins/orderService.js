@@ -163,6 +163,85 @@ const update_mark = {
   },
 };
 
+const aggregate = {
+  "@Action": "统计，聚合，求和，汇总",
+  "@Desc": "对订单金额进行统计聚合。支持按状态、客户、时间段分别统计，或查看整体金额汇总。",
+  "@ArgTemp": {
+    groupBy: "", // 可选，聚合维度：mark(按状态) | client_name(按客户) | 空为总体统计
+    mark: 0, // 可选，仅当需要按特定状态统计时填充（1-待处理, 2-处理中, 3-已处理）
+    client_name: "", // 可选，仅当需要按特定客户统计时填充
+    create_time: [], // 可选，时间范围查询 [start, end]，格式为 "YYYY-MM-DD HH:mm:ss"
+  },
+  handler: async (args) => {
+    let sqlText;
+    const params = [];
+
+    if (args.groupBy === "mark") {
+      // 按状态分组统计
+      sqlText = `
+        SELECT mark, COUNT(*) as order_count, SUM(total_amount) as total_amount, 
+               AVG(total_amount) as avg_amount
+        FROM dbo.tb_Order 
+        WHERE state <> -1
+      `;
+      if (args.create_time && args.create_time.length === 2) {
+        sqlText += ` AND create_time BETWEEN @start AND @end`;
+        params.push(
+          { name: "start", type: sql.DateTime, value: args.create_time[0] },
+          { name: "end", type: sql.DateTime, value: args.create_time[1] }
+        );
+      }
+      sqlText += ` GROUP BY mark ORDER BY mark`;
+    } else if (args.groupBy === "client_name") {
+      // 按客户分组统计
+      sqlText = `
+        SELECT client_name, COUNT(*) as order_count, SUM(total_amount) as total_amount,
+               AVG(total_amount) as avg_amount
+        FROM dbo.tb_Order 
+        WHERE state <> -1
+      `;
+      if (args.client_name) {
+        sqlText += ` AND client_name LIKE @client_name`;
+        params.push({
+          name: "client_name",
+          type: sql.NVarChar(100),
+          value: `%${args.client_name}%`,
+        });
+      }
+      if (args.create_time && args.create_time.length === 2) {
+        sqlText += ` AND create_time BETWEEN @start AND @end`;
+        params.push(
+          { name: "start", type: sql.DateTime, value: args.create_time[0] },
+          { name: "end", type: sql.DateTime, value: args.create_time[1] }
+        );
+      }
+      sqlText += ` GROUP BY client_name ORDER BY total_amount DESC`;
+    } else {
+      // 总体统计
+      sqlText = `
+        SELECT COUNT(*) as order_count, SUM(total_amount) as total_amount,
+               AVG(total_amount) as avg_amount, MIN(total_amount) as min_amount,
+               MAX(total_amount) as max_amount
+        FROM dbo.tb_Order 
+        WHERE state <> -1
+      `;
+      if (args.mark) {
+        sqlText += ` AND mark = @mark`;
+        params.push({ name: "mark", type: sql.Int, value: args.mark });
+      }
+      if (args.create_time && args.create_time.length === 2) {
+        sqlText += ` AND create_time BETWEEN @start AND @end`;
+        params.push(
+          { name: "start", type: sql.DateTime, value: args.create_time[0] },
+          { name: "end", type: sql.DateTime, value: args.create_time[1] }
+        );
+      }
+    }
+
+    return await query(sqlText, params);
+  },
+};
+
 module.exports = {
   "@Module": "订单，单子",
   "@Desc":
@@ -172,5 +251,6 @@ module.exports = {
     update,
     create,
     update_mark,
+    aggregate,
   },
 };
