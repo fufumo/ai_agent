@@ -98,8 +98,8 @@ const create = {
   },
   handler: async (args) => {
     const sqlText = `
-      INSERT INTO dbo.tb_Order (order_no, client_name, total_amount, mark, state, create_time)
-      VALUES (@no, @name, @amount, 1, 0, GETDATE());
+      INSERT INTO dbo.tb_Order (order_no, client_name, total_amount, mark, state, create_time,remark)
+      VALUES (@no, @name, @amount, 1, 0, GETDATE(),'');
       SELECT TOP 1 * FROM dbo.tb_Order ORDER BY id DESC;
     `;
     return await query(sqlText, [
