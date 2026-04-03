@@ -1,7 +1,7 @@
 const { query, sql } = require('../../db/sqlserver');
 
 const list = {
-  "@Action": "list",
+  "@Action": "列表，记录",
   "@Desc": "查找用户信息。支持姓名、账号、手机号模糊搜索。",
   "@ArgTemp": {
     "keyword": "" // 可选，仅当用户提到具体的姓名、账号或手机号时填充
@@ -18,7 +18,7 @@ const list = {
 };
 
 const create = {
-  "@Action": "create",
+  "@Action": "增加，新建，创建",
   "@Desc": "添加一名新的后台工作人员或客户账号。",
   "@ArgTemp": {
     "user_name": "",   // 必需，真实姓名（用户明确提供）
@@ -40,7 +40,7 @@ const create = {
 };
 
 module.exports = {
-  "@Module": "user",
+  "@Module": "用户",
   "@Desc": "用户权限与个人资料管理。处理账号搜索、联系电话查询及新用户入库。",
   actions: {
     list,

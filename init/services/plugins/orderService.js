@@ -1,13 +1,13 @@
 const { query, sql } = require("../../db/sqlserver");
 
 const list = {
-  "@Action": "list",
+  "@Action": "列表，记录",
   "@Desc": "根据关键词搜索订单，或根据状态标记(mark)筛选。",
   "@ArgTemp": {
-    order_no: "", // 可选，仅当用户提到具体的订单号时填充
-    client_name: "", // 可选，仅当用户提到具体的客户姓名时填充
-    mark: 0, // 可选，仅当用户提到特定状态时填充（1-待处理, 2-处理中, 3-已处理）
-    create_time: [] // 可选，时间范围查询，格式为 [start, end]，仅当用户提到具体时间范围时或者提供有关时间段的信息填充 必须填充两个时间 格式为 "YYYY-MM-DD HH:mm:ss" 比如上月 或者上周 等模糊时间描述由 AI 解析后转换 格式：["2026-03-01 00:00:00", "2026-03-31 23:59:59"]
+    order_no: "", // 订单号可选，仅当用户提到具体的订单号时填充
+    client_name: "", // 客户名可选，仅当用户提到具体的客户姓名时填充
+    mark: 0, // 状态可选，仅当用户提到特定状态时填充（1-待处理, 2-处理中, 3-已处理）
+    create_time: [] // 订单创建时间可选，时间范围查询，格式为 [start, end]，仅当用户提到具体时间范围时或者提供有关时间段的信息填充 必须填充两个时间 格式为 "YYYY-MM-DD HH:mm:ss" 比如上月 或者上周 等模糊时间描述由 AI 解析后转换 格式：["2026-03-01 00:00:00", "2026-03-31 23:59:59"]
   },
   handler: async (args) => {
     let sqlText = `SELECT id, order_no, client_name, mark, total_amount, remark FROM dbo.tb_Order WHERE state <> -1`;
@@ -47,7 +47,7 @@ const list = {
 };
 
 const update = {
-  "@Action": "update",
+  "@Action": "修改，编辑，更新",
   "@Desc": "修改现有订单的信息。可以修改金额、客户姓名或备注。",
   "@ArgTemp": {
     id: 0, // 必需，目标订单的唯一 ID
@@ -89,7 +89,7 @@ const update = {
 };
 
 const create = {
-  "@Action": "create",
+  "@Action": "增加，新建，创建",
   "@Desc": "创建一个全新的订单记录。",
   "@ArgTemp": {
     order_no: "", // 必需，订单编号（用户明确提供）
@@ -115,7 +115,7 @@ const create = {
 };
 
 const update_mark = {
-  "@Action": "update_mark",
+  "@Action": "更新状态",
   "@Desc": "根据订单 ID 或 订单号更新状态标记。",
   "@ArgTemp": {
     id: 0, // 可选，优先使用 ID
@@ -164,7 +164,7 @@ const update_mark = {
 };
 
 module.exports = {
-  "@Module": "order",
+  "@Module": "订单，单子",
   "@Desc":
     "订单管理系统。处理订单查询、新增、修改金额/客户名、标记状态及备注信息。",
   actions: {
