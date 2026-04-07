@@ -206,7 +206,7 @@ function normalizeDateRange(text, args = {}) {
   let start = null;
   let end = null;
 
-  if (text.includes('今天')) {
+  if (text.includes('今天') || text.includes('今日') || text.includes('该日')) {
     start = fmt(now);
     end = fmt(now);
   } else if (text.includes('昨天')) {
@@ -234,6 +234,22 @@ function normalizeDateRange(text, args = {}) {
     d.setDate(d.getDate() - 6);
     start = fmt(d);
     end = fmt(now);
+  } else if (
+    text.includes('本周') ||
+    text.includes('这周') ||
+    text.includes('这一周') ||
+    text.includes('本周的') ||
+    text.includes('这周的')
+  ) {
+    const d = new Date(now);
+    const day = d.getDay();
+    const offsetToMonday = day === 0 ? -6 : 1 - day;
+    const startDate = new Date(d);
+    startDate.setDate(d.getDate() + offsetToMonday);
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 6);
+    start = fmt(startDate);
+    end = fmt(endDate);
   } else if (text.includes('本月')) {
     const s = new Date(now.getFullYear(), now.getMonth(), 1);
     const e = new Date(now.getFullYear(), now.getMonth() + 1, 0);
@@ -249,7 +265,7 @@ function normalizeDateRange(text, args = {}) {
     const e = new Date(now.getFullYear(), 11, 31);
     start = fmt(s);
     end = fmt(e);
-  }
+  } 
 
   if (start && end) {
     if (Object.prototype.hasOwnProperty.call(nextArgs, 'create_time')) {
