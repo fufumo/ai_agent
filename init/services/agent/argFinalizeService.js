@@ -281,13 +281,21 @@ function validateArgs(actionDef = {}, args = {}) {
   });
 
   const enumMap = actionDef['@Enum'] || {};
+  const argTemp = actionDef['@ArgTemp'] || {};
   const invalidEnums = [];
 
   Object.entries(enumMap).forEach(([field, mapping]) => {
     if (!Object.prototype.hasOwnProperty.call(args, field)) return;
 
     const value = args[field];
+    const templateValue = argTemp[field];
+
+    // 空值跳过
     if (value === '' || value == null) return;
+
+    // ⭐ 如果当前值等于模板默认值，也跳过校验
+    // 比如 mark 默认就是 0，说明用户没传状态条件
+    if (value === templateValue) return;
 
     const validValues = new Set([...Object.keys(mapping), ...Object.values(mapping)]);
     if (!validValues.has(value)) {
