@@ -1,12 +1,12 @@
 const { askAI } = require('../ai');
 
-const ACTION_SYNONYMS = {
-  list: ['查', '查询', '看', '列出', '显示', '获取', '搜索'],
-  create: ['创建', '新增', '添加', '新建'],
-  update: ['修改', '更新', '编辑', '变更'],
-  delete: ['删除', '移除', '作废'],
-  aggregate: ['统计', '汇总', '分析', '合计']
-};
+// const ACTION_SYNONYMS = {
+//   create: ['创建', '新增', '添加', '新建'],
+//   update: ['修改', '更新', '编辑', '变更'],
+//   delete: ['删除', '移除', '作废'],
+//   aggregate: ['统计', '汇总', '分析', '合计'],
+//   list: ['查', '查询', '看', '列出', '显示', '获取', '搜索'],
+// };
 
 function normalizeText(text = '') {
   return String(text || '').trim();
@@ -21,7 +21,7 @@ function buildActionKeywords(actions = {}) {
 
     const fromAction = actionText.split(/[，,、\s]+/).filter(Boolean);
     const fromDesc = descText.split(/[，,、\s]+/).filter(Boolean).slice(0, 8);
-    const common = ACTION_SYNONYMS[actionKey] || [];
+    // const common = ACTION_SYNONYMS[actionKey] || [];
 
     map[actionKey] = [...new Set([...fromAction, ...fromDesc, ...common])];
   });
@@ -29,18 +29,18 @@ function buildActionKeywords(actions = {}) {
   return map;
 }
 
-function matchActionByRule(text, actions = {}) {
-  const normalized = normalizeText(text);
-  const keywordsMap = buildActionKeywords(actions);
+// function matchActionByRule(text, actions = {}) {
+//   const normalized = normalizeText(text);
+//   const keywordsMap = buildActionKeywords(actions);
 
-  for (const [actionKey, words] of Object.entries(keywordsMap)) {
-    if (words.some(word => normalized.includes(word))) {
-      return actionKey;
-    }
-  }
+//   for (const [actionKey, words] of Object.entries(keywordsMap)) {
+//     if (words.some(word => normalized.includes(word))) {
+//       return actionKey;
+//     }
+//   }
 
-  return null;
-}
+//   return null;
+// }
 
 async function matchActionByAI(text, actions = {}) {
   const actionDesc = Object.entries(actions).map(([key, def]) => {
@@ -69,13 +69,13 @@ ${actionDesc}
 }
 
 async function identifyAction(text, actions = {}) {
-  const byRule = matchActionByRule(text, actions);
-  if (byRule) {
-    console.log(`  ├─ 🎯 规则匹配成功: ${byRule}`);
-    return byRule;
-  }
+  // const byRule = matchActionByRule(text, actions);
+  // if (byRule) {
+  //   console.log(`  ├─ 🎯 规则匹配成功: ${byRule}`);
+  //   return byRule;
+  // }
 
-  console.log(`  ├─ 📡 规则匹配失败，尝试AI识别...`);
+  // console.log(`  ├─ 📡 规则匹配失败，尝试AI识别...`);
   return await matchActionByAI(text, actions);
 }
 
