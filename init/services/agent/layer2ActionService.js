@@ -1,98 +1,76 @@
-// services/agent/layer2ActionService.js
 const { askAI } = require('../ai');
 
-/**
- * 从 @Action 和 @Desc 中提取关键词用于模糊匹配
- */
-function buildActionKeywords(actions) {
-  const keywords = new Map();
-  
-  Object.entries(actions).forEach(([key, action]) => {
-    const actionTags = (action["@Action"] || '').split('，');
-    const desc = action["@Desc"] || '';
-    
-    // 存储主键
-    keywords.set(key.toLowerCase(), key);
-    
-    // 存储所有别名
-    actionTags.forEach(tag => {
-      const normalized = tag.trim().toLowerCase();
-      if (normalized) {
-        keywords.set(normalized, key);
-      }
-    });
-    
-    // 从描述中提取简单关键词
-    const descKeywords = desc.match(/[^、。，]+/g) || [];
-    descKeywords.slice(0, 3).forEach(kw => {
-      const normalized = kw.trim().toLowerCase();
-      if (normalized.length > 0 && normalized.length < 10) {
-        keywords.set(normalized, key);
-      }
-    });
-  });
-  
-  return keywords;
+const ACTION_SYNONYMS = {
+  list: ['查', '查询', '看', '列出', '显示', '获取', '搜索'],
+  create: ['创建', '新增', '添加', '新建'],
+  update: ['修改', '更新', '编辑', '变更'],
+  delete: ['删除', '移除', '作废'],
+  aggregate: ['统计', '汇总', '分析', '合计']
+};
+
+function normalizeText(text = '') {
+  return String(text || '').trim();
 }
 
-/**
- * 模糊匹配动作
- */
-function fuzzyMatchAction(text, keywords) {
-  const normalizedText = text.toLowerCase();
-  
-  // 精确匹配
-  if (keywords.has(normalizedText)) {
-    return keywords.get(normalizedText);
-  }
-  
-  // 包含匹配
-  for (const [key, actionKey] of keywords) {
-    if (normalizedText.includes(key)) {
+function buildActionKeywords(actions = {}) {
+  const map = {};
+
+  Object.entries(actions).forEach(([actionKey, actionDef]) => {
+    const actionText = String(actionDef['@Action'] || '');
+    const descText = String(actionDef['@Desc'] || '');
+
+    const fromAction = actionText.split(/[，,、\s]+/).filter(Boolean);
+    const fromDesc = descText.split(/[，,、\s]+/).filter(Boolean).slice(0, 8);
+    const common = ACTION_SYNONYMS[actionKey] || [];
+
+    map[actionKey] = [...new Set([...fromAction, ...fromDesc, ...common])];
+  });
+
+  return map;
+}
+
+function matchActionByRule(text, actions = {}) {
+  const normalized = normalizeText(text);
+  const keywordsMap = buildActionKeywords(actions);
+
+  for (const [actionKey, words] of Object.entries(keywordsMap)) {
+    if (words.some(word => normalized.includes(word))) {
       return actionKey;
     }
   }
-  
+
   return null;
 }
 
-async function detectAction(plugin, text) {
-  const actions = plugin.actions;
-  const keywords = buildActionKeywords(actions);
-  
-  // 先尝试快速的模糊匹配
-  const fuzzyKey = fuzzyMatchAction(text, keywords);
-  if (fuzzyKey && actions[fuzzyKey]) {
-    return { action: fuzzyKey, actionDef: actions[fuzzyKey] };
-  }
-  
-  // 如果快速匹配失败，调用 AI
-  const actionInfo = Object.keys(actions)
-    .map(k => `${k}(${actions[k]["@Action"]}): ${actions[k]["@Desc"]}`)
-    .join('\n');
+async function matchActionByAI(text, actions = {}) {
+  const actionDesc = Object.entries(actions).map(([key, def]) => {
+    return `${key}: 动作=${def['@Action'] || ''}；描述=${def['@Desc'] || ''}`;
+  }).join('\n');
 
-  const systemPrompt = `在"${plugin["@Module"]}"模块中选择最匹配的操作，只返回操作的 Key（如 list、update、create），不要其他内容。
-操作列表：
-${actionInfo}`;
+  const systemPrompt = `
+你是业务动作分类器。
+请根据用户输入，在候选动作中选出最合适的一个。
+只能返回动作 key，不要解释，不要多余文字。
 
-  try {
-    const actionKey = await askAI(systemPrompt, text);
-    const normalized = actionKey.trim().toLowerCase();
-    
-    // 尝试精确和模糊匹配
-    if (actions[normalized]) {
-      return { action: normalized, actionDef: actions[normalized] };
-    }
-    
-    for (const key of Object.keys(actions)) {
-      if (key.includes(normalized) || normalized.includes(key)) {
-        return { action: key, actionDef: actions[key] };
-      }
-    }
-  } catch (err) {
-    console.error('Layer2 AI Error:', err.message);
-  }
-  
+候选动作:
+${actionDesc}
+`.trim();
+
+  const result = await askAI(systemPrompt, text, { trace: 'layer2' });
+  const key = String(result || '').trim();
+
+  if (actions[key]) return key;
+
   return null;
 }
-module.exports = { detectAction };
+
+async function identifyAction(text, actions = {}) {
+  const byRule = matchActionByRule(text, actions);
+  if (byRule) return byRule;
+
+  return await matchActionByAI(text, actions);
+}
+
+module.exports = {
+  identifyAction
+};
