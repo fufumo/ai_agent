@@ -1,46 +1,130 @@
-// services/agent/layer3ArgsService.js
-const { askAI } = require('../ai');
+const { askAIForJSON } = require('../ai');
+const { cloneArgTemplate } = require('./argFinalizeService');
 
-async function extractArgs(actionDef, text, session = {}) {
-  const schema = JSON.stringify(actionDef["@ArgTemp"] || {});
-  const lastContext = session.lastResults ? `参考上下文（上一次查询结果）：${JSON.stringify(session.lastResults.slice(0,3))}` : '';
-
-  const systemPrompt = `
-    你是一个严格的参数提取专家。请根据用户输入，按照给定的 JSON 格式提取参数。
-    
-    标准 JSON 模板：
-    ${schema}
-    
-    ${lastContext}
-    
-    参数提取规则（必须遵守）：
-    1. 严格返回 JSON 格式，不要包含任何 Markdown 标识（如 \`\`\`json）。
-    2. 所有参数都可以为空！只有用户明确给出具体的搜索值时，才填充对应字段。
-    3. 特别警告：这些词汇是业务流程词，不是参数值，必须忽略：
-       - "查询"、"搜索"、"显示"、"列出"、"获取"、"找" （动词）
-       - "订单"、"用户"、"产品" （业务实体，不是搜索关键词）
-       - "所有"、"全部" （量词，表示无条件查询）
-       - "的" （虚词）
-    4. 参数填充案例：
-       - 用户说"查询订单" → keyword = ""（空），这是查询所有，订单是实体而非搜索词
-       - 用户说"查询所有订单" → keyword = ""（空），"所有" 表示无条件查询
-       - 用户说"查询客户王五的订单" → keyword = "王五"（具体的人名）
-       - 用户说"搜索订单号 ORD-123" → keyword = "ORD-123"（具体的订单号）
-       - 用户说"找一个待处理的订单" → keyword = ""，mark = 1（状态明确，但没有搜索词）
-    5. 如果用户说"第二个"或类似指代，请结合上下文中的数据提取对应的 ID。
-    6. 如果某个字段用户没有明确提及，设其为空值（字符串字段为 ""，数字字段为 0）。
-  `;
-
-  const aiRaw = await askAI(systemPrompt, text);
-  
+function parseJsonSafely(jsonStr) {
   try {
-    // 简单清理可能存在的 Markdown 标签
-    const cleanJson = aiRaw.replace(/```json|```/g, '').trim();
-    return JSON.parse(cleanJson);
+    const cleaned = String(jsonStr || '')
+      .replace(/```json\s*/gi, '')
+      .replace(/```\s*/g, '')
+      .replace(/\\n/g, '\n')
+      .trim();
+
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+
+    return JSON.parse(cleaned);
   } catch (e) {
-    console.error("AI 返回的 JSON 格式错误:", aiRaw);
-    return {};
+    console.error('[Layer3] JSON解析错误:', jsonStr);
+    return null;
   }
 }
 
-module.exports = { extractArgs };
+function generateParamPrompt(argTemp = {}) {
+  return Object.entries(argTemp)
+    .map(([key, value]) => {
+      let type = 'string';
+
+      if (typeof value === 'number') {
+        type = 'number';
+      } else if (Array.isArray(value)) {
+        type = 'array';
+      } else if (typeof value === 'boolean') {
+        type = 'boolean';
+      } else if (value && typeof value === 'object') {
+        type = 'object';
+      }
+
+      return `"${key}"(${type})`;
+    })
+    .join(', ');
+}
+
+function buildEmptyArgs(argTemp = {}) {
+  return cloneArgTemplate(argTemp || {});
+}
+
+function generateEnumPrompt(enumMap = {}) {
+  const entries = Object.entries(enumMap);
+  if (!entries.length) return '';
+
+  return entries
+    .map(([field, mapping]) => {
+      const text = Object.entries(mapping)
+        .map(([k, v]) => `${k}=>${v}`)
+        .join('，');
+      return `${field}: ${text}`;
+    })
+    .join('\n');
+}
+
+function generateExamplesPrompt(examples = []) {
+  if (!Array.isArray(examples) || !examples.length) return '';
+
+  return examples
+    .map(item => `输入: ${item.input}\n输出: ${JSON.stringify(item.output)}`)
+    .join('\n');
+}
+
+async function extractArgs(actionDef, text, session = {}) {
+  const argTemp = actionDef['@ArgTemp'] || {};
+  const required = actionDef['@Required'] || [];
+  const enumMap = actionDef['@Enum'] || {};
+  const examples = actionDef['@Examples'] || [];
+
+  const emptyArgs = buildEmptyArgs(argTemp);
+  const paramPrompt = generateParamPrompt(argTemp);
+  const enumPrompt = generateEnumPrompt(enumMap);
+  const examplesPrompt = generateExamplesPrompt(examples);
+
+  const systemPrompt = `
+你是一个业务参数提取器。
+你的任务是：从用户输入中提取参数，并且只返回 JSON 对象。
+不要解释，不要回答多余内容，不要 markdown，不要代码块。
+
+字段定义:
+{ ${paramPrompt} }
+
+必填字段:
+${required.length ? required.join(', ') : '无'}
+
+枚举映射:
+${enumPrompt || '无'}
+
+规则:
+1. 只能输出一个合法 JSON 对象
+2. 用户未提及的字段，保留为空值
+3. 不要臆造数据库中不存在的数据
+4. 忽略无意义虚词，例如：查询、搜索、列出、显示、帮我、请、一下、等等
+5. 如果用户说“第二个/第三个/最后一个”，不要猜 id，相关字段先留空
+6. 如果用户输入的是状态文本，可直接保留原文本，例如“已处理”、“处理中”
+7. 如果字段是数组，例如 create_time，只有在用户明确给出范围时才填写
+8. 输出必须严格匹配字段，不要增加额外字段
+${examplesPrompt ? `\n示例:\n${examplesPrompt}` : ''}
+`.trim();
+
+  try {
+    const aiRaw = await askAIForJSON(systemPrompt, text, { trace: 'layer3' });
+    const parsed = parseJsonSafely(aiRaw);
+
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return emptyArgs;
+    }
+
+    return {
+      ...emptyArgs,
+      ...parsed
+    };
+  } catch (err) {
+    console.error('[Layer3] 处理错误:', err.message);
+    return emptyArgs;
+  }
+}
+
+module.exports = {
+  extractArgs,
+  parseJsonSafely,
+  generateParamPrompt,
+  buildEmptyArgs
+};

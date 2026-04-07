@@ -1,86 +1,114 @@
-const fs = require('fs');
 const path = require('path');
-const { detectCategory } = require('./layer1CategoryService');
-const { detectAction } = require('./layer2ActionService');
+const fs = require('fs');
+
+const { preprocessText } = require('./preprocessService');
+const { getSession, updateSession } = require('./sessionStore');
+const { identifyCategory } = require('./layer1CategoryService');
+const { identifyAction } = require('./layer2ActionService');
 const { extractArgs } = require('./layer3ArgsService');
+const { finalizeArgs } = require('./argFinalizeService');
 
-
-const session = {
-    lastResults: []
-};
-
-/**
- * 自动加载所有业务插件
- */
 function loadPlugins() {
-    const plugins = [];
-    // 假设插件目录在项目根目录下的 plugins
-    const pluginPath = path.join(__dirname, '../plugins');
-    
-    if (!fs.existsSync(pluginPath)) {
-        console.error("插件目录不存在:", pluginPath);
-        return [];
+  const pluginsDir = path.join(__dirname, 'plugins');
+  const files = fs.readdirSync(pluginsDir).filter(name => name.endsWith('.js'));
+
+  const plugins = {};
+
+  files.forEach(file => {
+    const fullPath = path.join(pluginsDir, file);
+    delete require.cache[require.resolve(fullPath)];
+    const plugin = require(fullPath);
+    const key = file.replace(/\.js$/, '');
+    plugins[key] = plugin;
+  });
+
+  return plugins;
+}
+
+async function dispatch(text, context = {}) {
+  const sessionId = context.sessionId || 'default';
+  const session = getSession(sessionId);
+  const normalizedText = preprocessText(text);
+  const plugins = loadPlugins();
+
+  try {
+    const categoryKey = await identifyCategory(normalizedText, plugins);
+    if (!categoryKey || !plugins[categoryKey]) {
+      return {
+        success: false,
+        msg: '未识别到业务模块'
+      };
     }
 
-    const files = fs.readdirSync(pluginPath);
-    files.forEach(file => {
-        if (file.endsWith('.js')) {
-            const plugin = require(path.join(pluginPath, file));
-            plugins.push(plugin);
-        }
+    const plugin = plugins[categoryKey];
+    const actions = plugin.actions || {};
+
+    const actionKey = await identifyAction(normalizedText, actions);
+    if (!actionKey || !actions[actionKey]) {
+      return {
+        success: false,
+        msg: '未识别到业务动作',
+        category: categoryKey
+      };
+    }
+
+    const actionDef = actions[actionKey];
+
+    const rawArgs = await extractArgs(actionDef, normalizedText, session);
+    const { args, validation } = finalizeArgs(actionDef, rawArgs, normalizedText, session);
+
+    if (!validation.ok) {
+      return {
+        success: false,
+        msg: '参数校验失败',
+        category: categoryKey,
+        action: actionKey,
+        rawArgs,
+        args,
+        missing: validation.missing,
+        invalidEnums: validation.invalidEnums
+      };
+    }
+
+    const result = await actionDef.handler(args, {
+      text: normalizedText,
+      session,
+      sessionId,
+      categoryKey,
+      actionKey
     });
-    return plugins;
-}
 
-/**
- * 指令分发核心逻辑
- */
-async function dispatch(text) {
-    try {
-        // 1. 加载当前所有可用插件
-        const allPlugins = loadPlugins();
-        if (allPlugins.length === 0) {
-            return { success: false, msg: "系统尚未挂载任何业务插件" };
-        }
-
-        // 2. Layer 1: 识别业务模块 (Order/User/etc.)
-        const l1 = await detectCategory(text, allPlugins);
-        if (!l1.module || !l1.plugin) {
-            return { success: false, msg: "AI 无法识别该指令属于哪个业务模块" };
-        }
-
-        // 3. Layer 2: 在模块内识别具体动作 (List/Update/etc.)
-        const l2 = await detectAction(l1.plugin, text);
-        if (!l2) {
-            return { success: false, msg: `AI 无法在 ${l1.module} 模块中找到对应的操作` };
-        }
-
-        // 4. Layer 3: 根据 @ParamsExample 提取参数
-        // 提示：插件中必须定义 @ParamsExample 字段供 AI 参考
-        const args = await extractArgs(l2.actionDef, text, session);
-
-        // 5. 执行插件中的业务函数
-        const result = await l2.actionDef.handler(args);
-
-        // 6. 更新上下文 (用于处理“第二个”这种指代)
-        if (Array.isArray(result)) {
-            session.lastResults = result;
-        }
-
-        return {
-            success: true,
-            analysis: {
-                module: l1.module,
-                action: l2.action,
-                args: args
-            },
-            result: result
-        };
-    } catch (error) {
-        console.error("Dispatch Error:", error);
-        return { success: false, msg: "指令执行期间发生错误: " + error.message };
+    if (Array.isArray(result)) {
+      updateSession(sessionId, {
+        lastResults: result,
+        lastModule: categoryKey,
+        lastAction: actionKey,
+        lastArgs: args
+      });
+    } else {
+      updateSession(sessionId, {
+        lastModule: categoryKey,
+        lastAction: actionKey,
+        lastArgs: args
+      });
     }
+
+    return {
+      success: true,
+      category: categoryKey,
+      action: actionKey,
+      args,
+      data: result
+    };
+  } catch (err) {
+    console.error('[dispatch] 错误:', err);
+    return {
+      success: false,
+      msg: err.message || '系统处理失败'
+    };
+  }
 }
 
-// 导出对象，确保引用时 const { dispatch } 能正常解构
-module.exports = { dispatch };
+module.exports = {
+  dispatch
+};

@@ -1,19 +1,76 @@
-// services/agent/layer2ActionService.js
 const { askAI } = require('../ai');
 
-async function detectAction(plugin, text) {
-  const actions = plugin.actions;
-  const actionInfo = Object.keys(actions).map(k => `- ${k}: ${actions[k]["@Desc"]}`).join('\n');
+const ACTION_SYNONYMS = {
+  list: ['查', '查询', '看', '列出', '显示', '获取', '搜索'],
+  create: ['创建', '新增', '添加', '新建'],
+  update: ['修改', '更新', '编辑', '变更'],
+  delete: ['删除', '移除', '作废'],
+  aggregate: ['统计', '汇总', '分析', '合计']
+};
+
+function normalizeText(text = '') {
+  return String(text || '').trim();
+}
+
+function buildActionKeywords(actions = {}) {
+  const map = {};
+
+  Object.entries(actions).forEach(([actionKey, actionDef]) => {
+    const actionText = String(actionDef['@Action'] || '');
+    const descText = String(actionDef['@Desc'] || '');
+
+    const fromAction = actionText.split(/[，,、\s]+/).filter(Boolean);
+    const fromDesc = descText.split(/[，,、\s]+/).filter(Boolean).slice(0, 8);
+    const common = ACTION_SYNONYMS[actionKey] || [];
+
+    map[actionKey] = [...new Set([...fromAction, ...fromDesc, ...common])];
+  });
+
+  return map;
+}
+
+function matchActionByRule(text, actions = {}) {
+  const normalized = normalizeText(text);
+  const keywordsMap = buildActionKeywords(actions);
+
+  for (const [actionKey, words] of Object.entries(keywordsMap)) {
+    if (words.some(word => normalized.includes(word))) {
+      return actionKey;
+    }
+  }
+
+  return null;
+}
+
+async function matchActionByAI(text, actions = {}) {
+  const actionDesc = Object.entries(actions).map(([key, def]) => {
+    return `${key}: 动作=${def['@Action'] || ''}；描述=${def['@Desc'] || ''}`;
+  }).join('\n');
 
   const systemPrompt = `
-    你是一个指令解析器。在“${plugin["@Module"]}”模块下，根据用户输入判断具体动作。
-    可选动作：
-    ${actionInfo}
-    
-    注意：只返回动作的 Key（如 list 或 update），不要解释。
-  `;
+你是业务动作分类器。
+请根据用户输入，在候选动作中选出最合适的一个。
+只能返回动作 key，不要解释，不要多余文字。
 
-  const actionKey = await askAI(systemPrompt, text);
-  return actions[actionKey] ? { action: actionKey, actionDef: actions[actionKey] } : null;
+候选动作:
+${actionDesc}
+`.trim();
+
+  const result = await askAI(systemPrompt, text, { trace: 'layer2' });
+  const key = String(result || '').trim();
+
+  if (actions[key]) return key;
+
+  return null;
 }
-module.exports = { detectAction };
+
+async function identifyAction(text, actions = {}) {
+  const byRule = matchActionByRule(text, actions);
+  if (byRule) return byRule;
+
+  return await matchActionByAI(text, actions);
+}
+
+module.exports = {
+  identifyAction
+};
