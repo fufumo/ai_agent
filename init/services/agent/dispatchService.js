@@ -9,7 +9,7 @@ const { extractArgs } = require('./layer3ArgsService');
 const { finalizeArgs } = require('./argFinalizeService');
 
 function loadPlugins() {
-  const pluginsDir = path.join(__dirname, 'plugins');
+  const pluginsDir = path.join(__dirname, '..', 'plugins');
   const files = fs.readdirSync(pluginsDir).filter(name => name.endsWith('.js'));
 
   const plugins = {};
