@@ -35,10 +35,17 @@ function getCache(key) {
 
 function clearExpiredCache() {
   const now = Date.now();
+  let cleared = 0;
+  
   for (const [key, value] of aiCache.entries()) {
     if ((now - value.time) > CACHE_DURATION) {
       aiCache.delete(key);
+      cleared++;
     }
+  }
+  
+  if (cleared > 0) {
+    console.log(`[AI] 🧹 AI缓存清理: 删除${cleared}条，当前${aiCache.size}条`);
   }
 }
 
@@ -48,7 +55,10 @@ function setCache(key, result) {
 
     if (aiCache.size >= MAX_CACHE_SIZE) {
       const firstKey = aiCache.keys().next().value;
-      if (firstKey) aiCache.delete(firstKey);
+      if (firstKey) {
+        aiCache.delete(firstKey);
+        console.log(`[AI] 💾 AI缓存已满，删除最旧记录`);
+      }
     }
   }
 
@@ -92,13 +102,21 @@ async function askAI(systemPrompt, userMessage, options = {}) {
   if (useCache) {
     const cached = getCache(cacheKey);
     if (cached !== null) {
-      console.log(`[AI][${trace}] 缓存命中`);
+      console.log(`[AI] 💾 缓存命中 [${trace}] ${userMessage.substring(0, 30)}...`);
       return cached;
     }
   }
 
+  console.log(`[AI] 🔄 调用 Ollama [${trace}] ${userMessage.substring(0, 40)}...`);
+  const startTime = Date.now();
+  
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+  let finished = false;  // 标志位：防止超时后继续处理响应
+  const timer = setTimeout(() => {
+    finished = true;
+    console.warn(`[AI] ⏱️  请求超时 [${trace}]，中止连接...`);
+    controller.abort();
+  }, REQUEST_TIMEOUT);
 
   try {
     const res = await fetch(OLLAMA_URL, {
@@ -116,14 +134,28 @@ async function askAI(systemPrompt, userMessage, options = {}) {
       })
     });
 
+    // 超时后放弃处理响应
+    if (finished) {
+      console.warn(`[AI] ⚠️  已超时，放弃处理响应 [${trace}]`);
+      return '';
+    }
+
     if (!res.ok) {
       const text = await safeReadText(res);
-      throw new Error(`Ollama请求失败: HTTP ${res.status} ${res.statusText} ${text}`);
+      throw new Error(`Ollama请求失败: HTTP ${res.status} ${res.statusText}`);
     }
 
     const data = await res.json();
-    const result = extractContent(data);
+    
+    // 再次检查是否已超时
+    if (finished) {
+      console.warn(`[AI] ⚠️  已超时，放弃处理响应 [${trace}]`);
+      return '';
+    }
 
+    const result = extractContent(data);
+    const duration = Date.now() - startTime;
+    
     if (!result) {
       throw new Error('Ollama返回内容为空或结构异常');
     }
@@ -132,15 +164,21 @@ async function askAI(systemPrompt, userMessage, options = {}) {
       setCache(cacheKey, result);
     }
 
+    console.log(`[AI] ✅ 调用成功 [${trace}] (${duration}ms) 返回长度: ${result.length}`);
     return result;
   } catch (err) {
+    const duration = Date.now() - startTime;
+    
     if (err.name === 'AbortError') {
+      console.error(`[AI] ❌ 请求超时 [${trace}] (超过 ${REQUEST_TIMEOUT / 1000}s)`);
       throw new Error(`[AI][${trace}] 请求超时，超过 ${REQUEST_TIMEOUT / 1000} 秒`);
     }
 
+    console.error(`[AI] ❌ 调用失败 [${trace}] (${duration}ms) ${err.message}`);
     throw new Error(`[AI][${trace}] 调用失败: ${err.message}`);
   } finally {
-    clearTimeout(timer);
+    finished = true;  // 标记为已完成
+    clearTimeout(timer);  // 清理定时器
   }
 }
 

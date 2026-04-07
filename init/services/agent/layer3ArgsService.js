@@ -105,19 +105,22 @@ ${examplesPrompt ? `\n示例:\n${examplesPrompt}` : ''}
 `.trim();
 
   try {
+    console.log(`  ├─ 📡 AI提取参数中...`);
     const aiRaw = await askAIForJSON(systemPrompt, text, { trace: 'layer3' });
     const parsed = parseJsonSafely(aiRaw);
 
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      console.log(`  ├─ ⚠️  JSON解析失败，返回空参数`);
       return emptyArgs;
     }
 
+    console.log(`  ├─ ✅ 参数提取成功`);
     return {
       ...emptyArgs,
       ...parsed
     };
   } catch (err) {
-    console.error('[Layer3] 处理错误:', err.message);
+    console.error(`  ├─ ❌ Layer3处理错误: ${err.message}`);
     return emptyArgs;
   }
 }

@@ -59,15 +59,23 @@ ${actionDesc}
   const result = await askAI(systemPrompt, text, { trace: 'layer2' });
   const key = String(result || '').trim();
 
-  if (actions[key]) return key;
+  if (actions[key]) {
+    console.log(`  ├─ 💡 AI匹配成功: ${key}`);
+    return key;
+  }
 
+  console.log(`  ├─ ⚠️  AI返回不合法的key: "${key}"`);
   return null;
 }
 
 async function identifyAction(text, actions = {}) {
   const byRule = matchActionByRule(text, actions);
-  if (byRule) return byRule;
+  if (byRule) {
+    console.log(`  ├─ 🎯 规则匹配成功: ${byRule}`);
+    return byRule;
+  }
 
+  console.log(`  ├─ 📡 规则匹配失败，尝试AI识别...`);
   return await matchActionByAI(text, actions);
 }
 
