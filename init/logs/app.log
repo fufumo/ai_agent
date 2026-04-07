@@ -86,3 +86,4 @@
 {"body":{"text":"创建一个新订单 订单号为 202604021701001 客户是小叶 金额 是 1000"},"ip":"::1","level":"info","message":"POST /api/agent/dispatch - Status: 200 - 6251ms","method":"POST","responseTime":"6251ms","status":200,"timestamp":"2026-04-02 17:01:51","url":"/api/agent/dispatch"}
 {"body":{"text":"查询订单"},"ip":"::1","level":"info","message":"POST /api/agent/dispatch - Status: 200 - 3761ms","method":"POST","responseTime":"3761ms","status":200,"timestamp":"2026-04-02 17:02:21","url":"/api/agent/dispatch"}
 {"ip":"::1","level":"warn","message":"GET /favicon.ico - Status: 404 - 0ms","method":"GET","responseTime":"0ms","status":404,"timestamp":"2026-04-07 13:03:22","url":"/favicon.ico"}
+{"body":{"text":"查询所有订单"},"ip":"::1","level":"info","message":"POST /api/agent/dispatch - Status: 200 - 1122ms","method":"POST","responseTime":"1122ms","status":200,"timestamp":"2026-04-07 13:06:31","url":"/api/agent/dispatch"}
